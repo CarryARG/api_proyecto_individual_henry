@@ -1,8 +1,32 @@
 from fastapi import FastAPI
 import pandas as pd
 import ast
+from fastapi.responses import HTMLResponse
 
 app = FastAPI()
+
+@app.get("/", response_class=HTMLResponse)
+def read_root():
+    html_content = """
+    <html>
+        <head>
+            <title>API de Películas</title>
+        </head>
+        <body>
+            <h1>Bienvenido a la API de Películas</h1>
+            <p>Utiliza los siguientes endpoints para obtener información:</p>
+            <ul>
+                <li>/cantidad_filmaciones_mes/{mes}</li>
+                <li>/cantidad_filmaciones_dia/{dia}</li>
+                <li>/score_titulo/{titulo}</li>
+                <li>/votos_titulo/{titulo}</li>
+                <li>/get_actor/{nombre_actor}</li>
+                <li>/get_director/{nombre_director}</li>
+            </ul>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 df = pd.read_csv('movies_dataset_desanidado.csv')
 
