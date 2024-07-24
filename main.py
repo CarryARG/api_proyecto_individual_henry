@@ -4,104 +4,89 @@ import ast
 
 app = FastAPI()
 
-# Cargar el dataset
-movies_df = pd.read_csv('movies_dataset_desanidado.csv')
+df = pd.read_csv('movies_dataset_desanidado.csv')
 
-@app.get("/")
-def read_root():
-    return {"message": "API de películas"}
+# Funciones de los endpoints
 
-@app.get("/cantidad_filmaciones_mes/{mes}")
+@app.get('/cantidad_filmaciones_mes/{mes}')
 def cantidad_filmaciones_mes(mes: str):
     meses = {
-        "enero": 1, "febrero": 2, "marzo": 3, "abril": 4,
-        "mayo": 5, "junio": 6, "julio": 7, "agosto": 8,
-        "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12
+        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     }
     mes_numero = meses.get(mes.lower())
-    if not mes_numero:
+    if mes_numero:
+        count = df[pd.to_datetime(df['release_date'], errors='coerce').dt.month == mes_numero].shape[0]
+        return {f"{count} cantidad de películas fueron estrenadas en el mes de {mes}"}
+    else:
         return {"error": "Mes no válido"}
-    
-    cantidad = movies_df[pd.to_datetime(movies_df['release_date']).dt.month == mes_numero].shape[0]
-    return {"mes": mes, "cantidad": cantidad}
 
-@app.get("/cantidad_filmaciones_dia/{dia}")
+@app.get('/cantidad_filmaciones_dia/{dia}')
 def cantidad_filmaciones_dia(dia: str):
     dias = {
-        "lunes": 0, "martes": 1, "miércoles": 2, "jueves": 3,
-        "viernes": 4, "sábado": 5, "domingo": 6
+        'lunes': 0, 'martes': 1, 'miércoles': 2, 'jueves': 3,
+        'viernes': 4, 'sábado': 5, 'domingo': 6
     }
     dia_numero = dias.get(dia.lower())
-    if dia_numero is None:
+    if dia_numero is not None:
+        count = df[pd.to_datetime(df['release_date'], errors='coerce').dt.dayofweek == dia_numero].shape[0]
+        return {f"{count} cantidad de películas fueron estrenadas en los días {dia}"}
+    else:
         return {"error": "Día no válido"}
-    
-    cantidad = movies_df[pd.to_datetime(movies_df['release_date']).dt.dayofweek == dia_numero].shape[0]
-    return {"dia": dia, "cantidad": cantidad}
 
-@app.get("/score_titulo/{titulo}")
+@app.get('/score_titulo/{titulo}')
 def score_titulo(titulo: str):
-    pelicula = movies_df[movies_df['title'].str.lower() == titulo.lower()]
-    if pelicula.empty:
-        return {"error": "Título no encontrado"}
-    
-    resultado = pelicula.iloc[0]
-    return {
-        "titulo": resultado['title'],
-        "año": resultado['release_year'],
-        "score": resultado['vote_average']
-    }
+    film = df[df['title'].str.lower() == titulo.lower()]
+    if not film.empty:
+        score = film.iloc[0]['popularity']
+        year = film.iloc[0]['release_year']
+        return {f"La película {titulo} fue estrenada en el año {year} con un score/popularidad de {score}"}
+    else:
+        return {"error": "Película no encontrada"}
 
-@app.get("/votos_titulo/{titulo}")
+@app.get('/votos_titulo/{titulo}')
 def votos_titulo(titulo: str):
-    pelicula = movies_df[movies_df['title'].str.lower() == titulo.lower()]
-    if pelicula.empty:
-        return {"error": "Título no encontrado"}
-    
-    resultado = pelicula.iloc[0]
-    if resultado['vote_count'] < 2000:
-        return {"mensaje": "La película no cumple con la condición de al menos 2000 valoraciones"}
-    
-    return {
-        "titulo": resultado['title'],
-        "cantidad_votos": resultado['vote_count'],
-        "promedio_votos": resultado['vote_average']
-    }
+    film = df[df['title'].str.lower() == titulo.lower()]
+    if not film.empty:
+        votes = film.iloc[0]['vote_count']
+        average_vote = film.iloc[0]['vote_average']
+        if votes >= 2000:
+            year = film.iloc[0]['release_year']
+            return {f"La película {titulo} fue estrenada en el año {year}. La misma cuenta con un total de {votes} valoraciones, con un promedio de {average_vote}"}
+        else:
+            return {"error": "La película no tiene al menos 2000 valoraciones"}
+    else:
+        return {"error": "Película no encontrada"}
 
-@app.get("/get_actor/{nombre_actor}")
+@app.get('/get_actor/{nombre_actor}')
 def get_actor(nombre_actor: str):
-    actor_data = movies_df[movies_df['cast'].apply(lambda x: nombre_actor in ast.literal_eval(x))]
-    if actor_data.empty:
+    actor_films = df[df['cast'].apply(lambda x: nombre_actor.lower() in [d['name'].lower() for d in ast.literal_eval(x) if 'name' in d])]
+    if not actor_films.empty:
+        total_return = actor_films['return'].sum()
+        num_films = actor_films.shape[0]
+        avg_return = total_return / num_films if num_films > 0 else 0
+        return {f"El actor {nombre_actor} ha participado de {num_films} cantidad de filmaciones, el mismo ha conseguido un retorno de {total_return} con un promedio de {avg_return} por filmación"}
+    else:
         return {"error": "Actor no encontrado"}
-    
-    cantidad_peliculas = actor_data.shape[0]
-    total_return = actor_data['return'].sum()
-    promedio_return = actor_data['return'].mean()
-    
-    return {
-        "actor": nombre_actor,
-        "cantidad_peliculas": cantidad_peliculas,
-        "total_return": total_return,
-        "promedio_return": promedio_return
-    }
 
-@app.get("/get_director/{nombre_director}")
+@app.get('/get_director/{nombre_director}')
 def get_director(nombre_director: str):
-    director_data = movies_df[movies_df['crew'].apply(lambda x: any(d['job'] == 'Director' and d['name'] == nombre_director for d in ast.literal_eval(x)))]
-    if director_data.empty:
+    director_films = df[df['crew'].apply(lambda x: nombre_director.lower() in [d['name'].lower() for d in ast.literal_eval(x) if d['job'] == 'Director'])]
+    if not director_films.empty:
+        films_data = []
+        for _, row in director_films.iterrows():
+            films_data.append({
+                "title": row['title'],
+                "release_date": row['release_date'],
+                "return": row['return'],
+                "budget": row['budget'],
+                "revenue": row['revenue']
+            })
+        return {f"El director {nombre_director} ha dirigido las siguientes películas": films_data}
+    else:
         return {"error": "Director no encontrado"}
-    
-    peliculas = []
-    for _, row in director_data.iterrows():
-        peliculas.append({
-            "titulo": row['title'],
-            "fecha_lanzamiento": row['release_date'],
-            "retorno_individual": row['return'],
-            "costo": row['budget'],
-            "ganancia": row['revenue']
-        })
-    
-    return {
-        "director": nombre_director,
-        "peliculas": peliculas
-    }
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
