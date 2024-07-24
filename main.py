@@ -5,6 +5,9 @@ from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
+# Cargar el dataset
+df = pd.read_csv('movies_dataset_desanidado.csv')
+
 @app.get("/", response_class=HTMLResponse)
 def read_root():
     html_content = """
@@ -27,10 +30,6 @@ def read_root():
     </html>
     """
     return HTMLResponse(content=html_content)
-
-df = pd.read_csv('movies_dataset_desanidado.csv')
-
-# Funciones de los endpoints
 
 @app.get('/cantidad_filmaciones_mes/{mes}')
 def cantidad_filmaciones_mes(mes: str):
