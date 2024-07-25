@@ -89,6 +89,16 @@ def score_titulo(titulo: str):
 @app.get('/votos_titulo/{titulo}')
 def votos_titulo(titulo: str):
     film = df[df['title'].str.lower() == titulo.lower()]
+    if not film.empty:
+        votos = film.iloc[0]['vote_count']
+        promedio_votos = film.iloc[0]['vote_average']
+        return {
+            "title": titulo,
+            "votos": votos,
+            "promedio_votos": promedio_votos
+        }
+    else:
+        return {"error": "Película no encontrada"}
 
 # Esto es opcional, es para revisar el dataset
 @app.get("/dataset_info")
