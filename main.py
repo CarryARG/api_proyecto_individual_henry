@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
 import numpy as np
 import ast
@@ -79,10 +79,28 @@ def votos_titulo(titulo: str):
 
 # Esto es opcional, es para revisar el dataset
 @app.get("/dataset_info")
-def dataset_info():
+def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(100, le=1000)):
+    """
+    Devuelve un subconjunto del dataset.
+    
+    - skip: número de la página para saltar (por defecto 0)
+    - limit: número de registros por página (por defecto 100, máximo 1000)
+    """
     try:
         # Reemplazar NaN y valores infinitos con None para que sean JSON serializables
         df_clean = df.replace({np.nan: None, np.inf: None, -np.inf: None})
-        return {"columns": df_clean.columns.tolist(), "sample_data": df_clean.head().to_dict(orient="records")}
+        
+        # Seleccionar la página de datos
+        start = skip * limit
+        end = start + limit
+        
+        # Asegurarse de que no se superen los límites del DataFrame
+        if start >= len(df_clean):
+            raise HTTPException(status_code=404, detail="No hay más datos para mostrar.")
+        
+        # Extraer el subconjunto de datos
+        subset = df_clean.iloc[start:end]
+        
+        return {"columns": df_clean.columns.tolist(), "data": subset.to_dict(orient="records")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
