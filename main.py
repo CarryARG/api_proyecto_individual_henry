@@ -69,6 +69,7 @@ def votos_titulo(titulo: str):
     film = df[df['title'].str.lower() == titulo.lower()]
 
 # Esto es opcional, es para revisar el dataset
+@app.get("/dataset_info")
 def dataset_info():
     try:
         # Reemplazar NaN y valores infinitos con None para que sean JSON serializables
