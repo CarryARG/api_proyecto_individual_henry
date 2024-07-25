@@ -69,6 +69,10 @@ def votos_titulo(titulo: str):
     film = df[df['title'].str.lower() == titulo.lower()]
 
 # Esto es opcional, es para revisar el dataset
-@app.get("/dataset_info")
 def dataset_info():
-    return {"columns": df.columns.tolist(), "sample_data": df.head().to_dict(orient="records")}
+    try:
+        # Reemplazar NaN y valores infinitos con None para que sean JSON serializables
+        df_clean = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+        return {"columns": df_clean.columns.tolist(), "sample_data": df_clean.head().to_dict(orient="records")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
