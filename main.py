@@ -18,7 +18,8 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia."
-        }
+        },
+        "columns": df.columns.tolist()
     }
 
 @app.get('/cantidad_filmaciones_mes/{mes}')
