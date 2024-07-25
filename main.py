@@ -8,9 +8,6 @@ app = FastAPI()
 # Especificar tipos de datos para las columnas
 df = pd.read_csv('movies_dataset_limpio.csv')
 
-# Cargar el dataset
-#df = pd.read_csv('movies_dataset_limpio.csv', low_memory=False)
-
 @app.get("/")
 def read_root():
     return {
@@ -22,7 +19,7 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info/": "Endpoint de prueba para revisar el dataset"
+            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10"
         },
     }
 
