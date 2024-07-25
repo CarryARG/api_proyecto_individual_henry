@@ -4,8 +4,32 @@ import ast
 
 app = FastAPI()
 
+# Especificar tipos de datos para las columnas
+dtype_dict = {
+    'belongs_to_collection': str,
+    'budget': float,
+    'genres': str,
+    'id': int,
+    'original_language': str,
+    'original_title': str,
+    'overview': str,
+    'popularity': float,
+    'production_companies': str,
+    'release_date': str,
+    'revenue': float,
+    'runtime': float,
+    'spoken_languages': str,
+    'status': str,
+    'tagline': str,
+    'title': str,
+    'vote_average': float,
+    'vote_count': int,
+    'release_year': int,
+    'return': float
+}
+
 # Cargar el dataset
-df = pd.read_csv('movies_dataset_limpio.csv')
+df = pd.read_csv('movies_dataset_limpio.csv', dtype=dtype_dict)
 
 @app.get("/")
 def read_root():
@@ -18,7 +42,7 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info": "Endpoint de prueba para revisar el dataset"
+            "/dataset_info/": "Endpoint de prueba para revisar el dataset"
         },
     }
 
