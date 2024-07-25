@@ -66,4 +66,4 @@ def votos_titulo(titulo: str):
 # Esto es opcional, es para revisar el dataset
 @app.get("/dataset_info")
 def dataset_info():
-    return {"columns": df.columns.tolist()}
+    return {"columns": df.columns.tolist(), "sample_data": df.head().to_dict(orient="records")}
