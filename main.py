@@ -29,7 +29,7 @@ dtype_dict = {
     'return': float
 }
 
-df = pd.read_csv('movies_dataset_desanidado.csv', dtype=dtype_dict)
+df = pd.read_csv('movies_dataset_limpio.csv', dtype=dtype_dict)
 
 # Cargar el dataset
 #df = pd.read_csv('movies_dataset_limpio.csv', low_memory=False)
