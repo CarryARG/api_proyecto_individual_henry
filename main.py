@@ -6,30 +6,7 @@ import ast
 app = FastAPI()
 
 # Especificar tipos de datos para las columnas
-dtype_dict = {
-    'belongs_to_collection': str,
-    'budget': float,
-    'genres': str,
-    'id': int,
-    'original_language': str,
-    'original_title': str,
-    'overview': str,
-    'popularity': float,
-    'production_companies': str,
-    'release_date': str,
-    'revenue': float,
-    'runtime': float,
-    'spoken_languages': str,
-    'status': str,
-    'tagline': str,
-    'title': str,
-    'vote_average': float,
-    'vote_count': int,
-    'release_year': int,
-    'return': float
-}
-
-df = pd.read_csv('movies_dataset_limpio.csv', dtype=dtype_dict)
+df = pd.read_csv('movies_dataset_limpio.csv')
 
 # Cargar el dataset
 #df = pd.read_csv('movies_dataset_limpio.csv', low_memory=False)
