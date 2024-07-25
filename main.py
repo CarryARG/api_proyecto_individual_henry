@@ -17,9 +17,9 @@ def read_root():
             "/score_titulo/{titulo}": "Devuelve el título, año de estreno y score de la película especificada.",
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
-            "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia."
+            "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
+            "/dataset_info": "Endpoint de prueba para revisar el dataset"
         },
-        "columns": df.columns.tolist()
     }
 
 @app.get('/cantidad_filmaciones_mes/{mes}')
@@ -62,3 +62,8 @@ def score_titulo(titulo: str):
 @app.get('/votos_titulo/{titulo}')
 def votos_titulo(titulo: str):
     film = df[df['title'].str.lower() == titulo.lower()]
+
+# Esto es opcional, es para revisar el dataset
+@app.get("/dataset_info")
+def dataset_info():
+    return {"columns": df.columns.tolist()}
