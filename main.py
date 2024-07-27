@@ -5,8 +5,8 @@ import ast
 
 app = FastAPI()
 
-# Especificar tipos de datos para las columnas
-df = pd.read_csv('movies_dataset_limpio.csv')
+# Cargar el dataset limpio
+df = pd.read_csv('dataset_limpio.csv')
 
 @app.get("/")
 def read_root():
@@ -74,14 +74,41 @@ def votos_titulo(titulo: str):
     else:
         return {"error": "Película no encontrada"}
 
-# Esto es opcional, es para revisar el dataset
+@app.get('/get_actor/{nombre_actor}')
+def get_actor(nombre_actor: str):
+    films = df[df['actors'].str.contains(nombre_actor, case=False, na=False)]
+    if not films.empty:
+        cantidad = films.shape[0]
+        retorno_total = films['return'].sum()
+        retorno_promedio = films['return'].mean()
+        return {
+            "actor": nombre_actor,
+            "cantidad_peliculas": cantidad,
+            "retorno_total": retorno_total,
+            "retorno_promedio": retorno_promedio
+        }
+    else:
+        return {"error": "Actor no encontrado"}
+
+@app.get('/get_director/{nombre_director}')
+def get_director(nombre_director: str):
+    films = df[df['directors'].str.contains(nombre_director, case=False, na=False)]
+    if not films.empty:
+        peliculas_info = films[['title', 'release_date', 'return', 'budget', 'revenue']].to_dict(orient='records')
+        return {
+            "director": nombre_director,
+            "peliculas": peliculas_info
+        }
+    else:
+        return {"error": "Director no encontrado"}
+
 @app.get("/dataset_info")
-def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(100, le=1000)):
+def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10, le=100)):
     """
     Devuelve un subconjunto del dataset.
     
     - skip: número de la página para saltar (por defecto 0)
-    - limit: número de registros por página (por defecto 100, máximo 1000)
+    - limit: número de registros por página (por defecto 10, máximo 100)
     """
     try:
         # Reemplazar NaN y valores infinitos con None para que sean JSON serializables
