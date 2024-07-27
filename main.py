@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
+import numpy as np
 import ast
 
 app = FastAPI()
 
-# Cargar el dataset
+# Especificar tipos de datos para las columnas
 df = pd.read_csv('movies_dataset_limpio.csv')
 
 @app.get("/")
@@ -18,7 +19,7 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info": "Endpoint de prueba para revisar el dataset"
+            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10"
         },
     }
 
@@ -62,8 +63,41 @@ def score_titulo(titulo: str):
 @app.get('/votos_titulo/{titulo}')
 def votos_titulo(titulo: str):
     film = df[df['title'].str.lower() == titulo.lower()]
+    if not film.empty:
+        votos = film.iloc[0]['vote_count']
+        promedio_votos = film.iloc[0]['vote_average']
+        return {
+            "title": titulo,
+            "votos": votos,
+            "promedio_votos": promedio_votos
+        }
+    else:
+        return {"error": "Película no encontrada"}
 
 # Esto es opcional, es para revisar el dataset
 @app.get("/dataset_info")
-def dataset_info():
-    return {"columns": df.columns.tolist(), "sample_data": df.head().to_dict(orient="records")}
+def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(100, le=1000)):
+    """
+    Devuelve un subconjunto del dataset.
+    
+    - skip: número de la página para saltar (por defecto 0)
+    - limit: número de registros por página (por defecto 100, máximo 1000)
+    """
+    try:
+        # Reemplazar NaN y valores infinitos con None para que sean JSON serializables
+        df_clean = df.replace({np.nan: None, np.inf: None, -np.inf: None})
+        
+        # Seleccionar la página de datos
+        start = skip * limit
+        end = start + limit
+        
+        # Asegurarse de que no se superen los límites del DataFrame
+        if start >= len(df_clean):
+            raise HTTPException(status_code=404, detail="No hay más datos para mostrar.")
+        
+        # Extraer el subconjunto de datos
+        subset = df_clean.iloc[start:end]
+        
+        return {"columns": df_clean.columns.tolist(), "data": subset.to_dict(orient="records")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
