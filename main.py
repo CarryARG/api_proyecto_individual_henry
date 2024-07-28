@@ -112,12 +112,12 @@ def get_director(nombre_director: str):
         return {"error": "Director no encontrado"}
 
 @app.get("/dataset_info")
-def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(1000, le=1000)):
+def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10000, le=10000)):
     """
     Devuelve un subconjunto del dataset.
 
     - skip: número de la página para saltar (por defecto 0)
-    - limit: número de registros por página (por defecto 1000, máximo 1000)
+    - limit: número de registros por página (por defecto 10000, máximo 10000)
     """
     try:
         # Seleccionar la página de datos
