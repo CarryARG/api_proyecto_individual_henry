@@ -129,8 +129,7 @@ def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10
             raise HTTPException(status_code=404, detail="No hay más datos para mostrar.")
 
         # Extraer el subconjunto de datos
-        subset = df.iloc[start:end].replace({np.nan: None, np.inf: None, -np.inf: None})
-
-        return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records")}
+        subset = df.iloc[start:end]
+        return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records", na_rep='null')}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
