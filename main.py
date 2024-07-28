@@ -5,8 +5,17 @@ import ast
 
 app = FastAPI()
 
-# Cargar el dataset limpio
+# Cargar el dataset limpio y preprocesar
 df = pd.read_csv('dataset_limpio.csv')
+
+# Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
+df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+df['release_month'] = df['release_date'].dt.month
+df['release_day'] = df['release_date'].dt.dayofweek
+df['release_year'] = df['release_date'].dt.year
+
+# Indexar la columna title para acelerar las búsquedas
+df.set_index('title', inplace=True, drop=False)
 
 @app.get("/")
 def read_root():
@@ -32,7 +41,7 @@ def cantidad_filmaciones_mes(mes: str):
     }
     mes_numero = meses.get(mes.lower())
     if mes_numero:
-        count = df[pd.to_datetime(df['release_date'], errors='coerce').dt.month == mes_numero].shape[0]
+        count = df[df['release_month'] == mes_numero].shape[0]
         return {f"{count} cantidad de películas fueron estrenadas en el mes de {mes}"}
     else:
         return {"error": "Mes no válido"}
@@ -45,7 +54,7 @@ def cantidad_filmaciones_dia(dia: str):
     }
     dia_numero = dias.get(dia.lower())
     if dia_numero is not None:
-        count = df[pd.to_datetime(df['release_date'], errors='coerce').dt.dayofweek == dia_numero].shape[0]
+        count = df[df['release_day'] == dia_numero].shape[0]
         return {f"{count} cantidad de películas fueron estrenadas en los días {dia}"}
     else:
         return {"error": "Día no válido"}
@@ -106,25 +115,22 @@ def get_director(nombre_director: str):
 def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10, le=100)):
     """
     Devuelve un subconjunto del dataset.
-    
+
     - skip: número de la página para saltar (por defecto 0)
     - limit: número de registros por página (por defecto 10, máximo 100)
     """
     try:
-        # Reemplazar NaN y valores infinitos con None para que sean JSON serializables
-        df_clean = df.replace({np.nan: None, np.inf: None, -np.inf: None})
-        
         # Seleccionar la página de datos
         start = skip * limit
         end = start + limit
-        
+
         # Asegurarse de que no se superen los límites del DataFrame
-        if start >= len(df_clean):
+        if start >= len(df):
             raise HTTPException(status_code=404, detail="No hay más datos para mostrar.")
-        
+
         # Extraer el subconjunto de datos
-        subset = df_clean.iloc[start:end]
-        
-        return {"columns": df_clean.columns.tolist(), "data": subset.to_dict(orient="records")}
+        subset = df.iloc[start:end].replace({np.nan: None, np.inf: None, -np.inf: None})
+
+        return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
