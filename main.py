@@ -28,7 +28,8 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10"
+            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10",
+            "/recomendacion/{titulo}": "Devuelve una lista de 5 películas similares a la película especificada.",
         },
     }
 
@@ -134,3 +135,19 @@ def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10
         return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.get('/recomendacion/{titulo}')
+def recomendacion(titulo: str):
+    idx = df.index[df['title'].str.lower() == titulo.lower()]
+    if idx.empty:
+        return {"error": "Película no encontrada"}
+    
+    idx = idx[0]
+    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    
+    top_5_indices = [i[0] for i in sim_scores[1:6]]
+    recomendations = df['title'].iloc[top_5_indices].tolist()
+    
+    return {"recomendaciones": recomendations}
