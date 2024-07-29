@@ -1,12 +1,14 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 import pandas as pd
-import numpy as np
-import ast
+import joblib
+from sklearn.metrics.pairwise import linear_kernel
 
 app = FastAPI()
 
-# Cargar el dataset limpio y preprocesar
-df = pd.read_csv('dataset_limpio.csv')
+# Cargar el DataFrame procesado y los artefactos
+df = pd.read_csv('movies_dataframe.csv')
+tfidf = joblib.load('tfidf_vectorizer.joblib')
+tfidf_matrix = joblib.load('tfidf_matrix.joblib')
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -28,7 +30,7 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10"
+            "/recomendacion/{titulo}": "Devuelve una lista de 5 películas similares al título especificado.",
         },
     }
 
@@ -111,26 +113,16 @@ def get_director(nombre_director: str):
     else:
         return {"error": "Director no encontrado"}
 
-@app.get("/dataset_info")
-def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(1000, le=1000)):
-    """
-    Devuelve un subconjunto del dataset.
+@app.get('/recomendacion/{titulo}')
+def recomendacion(titulo: str):
+    if titulo not in df['title'].values:
+        return {"error": "Película no encontrada"}
 
-    - skip: número de la página para saltar (por defecto 0)
-    - limit: número de registros por página (por defecto 1000, máximo 1000)
-    """
-    try:
-        # Seleccionar la página de datos
-        start = skip * limit
-        end = start + limit
-
-        # Asegurarse de que no se superen los límites del DataFrame
-        if start >= len(df):
-            raise HTTPException(status_code=404, detail="No hay más datos para mostrar.")
-
-        # Extraer el subconjunto de datos
-        subset = df.iloc[start:end].replace({np.nan: None, np.inf: None, -np.inf: None})
-
-        return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    idx = df[df['title'] == titulo].index[0]
+    cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
+    sim_scores = list(enumerate(cosine_sim))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sim_scores[1:6]  # Excluir la propia película
+    movie_indices = [i[0] for i in sim_scores]
+    
+    return [df['title'].iloc[i] for i in movie_indices]
