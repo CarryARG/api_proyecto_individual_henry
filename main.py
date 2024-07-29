@@ -1,44 +1,14 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 import pandas as pd
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
+import joblib
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = FastAPI()
 
-# Cargar el dataset limpio y preprocesar
-df = pd.read_csv('dataset_limpio.csv')
-
-# Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
-df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
-df['release_month'] = df['release_date'].dt.month
-df['release_day'] = df['release_date'].dt.dayofweek
-df['release_year'] = df['release_date'].dt.year
-
-# Indexar la columna title para acelerar las búsquedas
-df.set_index('title', inplace=True, drop=False)
-
-# Vectorizar los títulos
-tfidf = TfidfVectorizer(stop_words='english')
-df['title'] = df['title'].fillna('')
-tfidf_matrix = tfidf.fit_transform(df['title'])
-
-# Calcular la matriz de similitud
-cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
-
-# Crear una serie para mapear títulos a índices
-indices = pd.Series(df.index, index=df['title']).drop_duplicates()
-
-def get_recommendations(title, cosine_sim=cosine_sim):
-    if title not in indices:
-        raise HTTPException(status_code=404, detail="Title not found")
-
-    idx = indices[title]
-    sim_scores = list(enumerate(cosine_sim[idx]))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    sim_scores = sim_scores[1:6]
-    movie_indices = [i[0] for i in sim_scores]
-    return df['title'].iloc[movie_indices].tolist()
+# Cargar el dataset y modelos preentrenados
+df = joblib.load('ML/movies_df.joblib')
+tfidf = joblib.load('ML/tfidf_vectorizer.joblib')
+tfidf_matrix = joblib.load('ML/tfidf_matrix.joblib')
 
 @app.get("/")
 def read_root():
@@ -51,7 +21,30 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/recomendacion/{titulo}": "Devuelve una lista de películas similares a la película especificada."
+            "/recomendacion/{titulo}": "Devuelve una lista de 5 películas similares al título especificado."
+        },
+    }
+
+# Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
+df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+df['release_month'] = df['release_date'].dt.month
+df['release_day'] = df['release_date'].dt.dayofweek
+
+# Indexar la columna title para acelerar las búsquedas
+df.set_index('title', inplace=True, drop=False)
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "Bienvenido a la API de Películas. Utiliza los siguientes endpoints para obtener información:",
+        "endpoints": {
+            "/cantidad_filmaciones_mes/{mes}": "Devuelve la cantidad de películas estrenadas en el mes especificado.",
+            "/cantidad_filmaciones_dia/{dia}": "Devuelve la cantidad de películas estrenadas en el día especificado.",
+            "/score_titulo/{titulo}": "Devuelve el título, año de estreno y score de la película especificada.",
+            "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
+            "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
+            "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
+            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10"
         },
     }
 
@@ -84,60 +77,79 @@ def cantidad_filmaciones_dia(dia: str):
 
 @app.get('/score_titulo/{titulo}')
 def score_titulo(titulo: str):
-    film = df[df['title'].str.lower() == titulo.lower()]
-    if not film.empty:
-        score = film.iloc[0]['popularity']
-        year = film.iloc[0]['release_year']
-        return {f"La película {titulo} fue estrenada en el año {year} con un score/popularidad de {score}"}
+    if titulo in df.index:
+        pelicula = df.loc[titulo]
+        return {
+            'titulo': pelicula['title'],
+            'año': pelicula['release_year'],
+            'score': pelicula['vote_average']
+        }
     else:
-        return {"error": "Película no encontrada"}
+        return {"error": "Título no encontrado"}
 
 @app.get('/votos_titulo/{titulo}')
 def votos_titulo(titulo: str):
-    film = df[df['title'].str.lower() == titulo.lower()]
-    if not film.empty:
-        votos = film.iloc[0]['vote_count']
-        promedio_votos = film.iloc[0]['vote_average']
-        return {
-            "title": titulo,
-            "votos": votos,
-            "promedio_votos": promedio_votos
-        }
+    if titulo in df.index:
+        pelicula = df.loc[titulo]
+        if pelicula['vote_count'] >= 2000:
+            return {
+                'titulo': pelicula['title'],
+                'cantidad_votos': pelicula['vote_count'],
+                'promedio_votos': pelicula['vote_average']
+            }
+        else:
+            return {"error": "La película no cumple con los votos suficientes"}
     else:
-        return {"error": "Película no encontrada"}
+        return {"error": "Título no encontrado"}
 
 @app.get('/get_actor/{nombre_actor}')
 def get_actor(nombre_actor: str):
-    films = df[df['actors'].str.contains(nombre_actor, case=False, na=False)]
-    if not films.empty:
-        cantidad = films.shape[0]
-        retorno_total = films['return'].sum()
-        retorno_promedio = films['return'].mean()
+    actor_peliculas = df[df['actors'].str.contains(nombre_actor, na=False)]
+    if not actor_peliculas.empty:
+        cantidad_peliculas = actor_peliculas.shape[0]
+        retorno_promedio = actor_peliculas['return'].mean()
+        exito = actor_peliculas['return'].sum()
         return {
-            "actor": nombre_actor,
-            "cantidad_peliculas": cantidad,
-            "retorno_total": retorno_total,
-            "retorno_promedio": retorno_promedio
+            'actor': nombre_actor,
+            'cantidad_peliculas': cantidad_peliculas,
+            'retorno_promedio': retorno_promedio,
+            'exito': exito
         }
     else:
         return {"error": "Actor no encontrado"}
 
 @app.get('/get_director/{nombre_director}')
 def get_director(nombre_director: str):
-    films = df[df['directors'].str.contains(nombre_director, case=False, na=False)]
-    if not films.empty:
-        peliculas_info = films[['title', 'release_date', 'return', 'budget', 'revenue']].to_dict(orient='records')
+    director_peliculas = df[df['directors'].str.contains(nombre_director, na=False)]
+    if not director_peliculas.empty:
+        peliculas = director_peliculas[['title', 'release_date', 'return', 'budget', 'revenue']].to_dict(orient='records')
+        exito = director_peliculas['return'].sum()
         return {
-            "director": nombre_director,
-            "peliculas": peliculas_info
+            'director': nombre_director,
+            'peliculas': peliculas,
+            'exito': exito
         }
     else:
         return {"error": "Director no encontrado"}
 
-@app.get("/recomendacion/{titulo}")
-def recomendacion(titulo: str):
-    try:
-        recomendaciones = get_recommendations(titulo)
-        return {"recomendaciones": recomendaciones}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get('/recomendacion/{titulo}', name="Sistema de recomendación")
+async def recomendacion(titulo: str):
+    '''Se ingresa el nombre de una película y se recomienda las 5 películas más similares en una lista'''
+    # Verificar si el título está en el DataFrame
+    if titulo not in df['title'].values:
+        raise HTTPException(status_code=404, detail="Película no encontrada")
+
+    # Obtener el índice de la película
+    idx = df[df['title'].str.lower() == titulo.lower()].index[0]
+
+    # Calcular la similitud coseno
+    cosine_sim = cosine_similarity(tfidf_matrix[idx], tfidf_matrix).flatten()
+
+    # Obtener los índices de las películas más similares
+    similar_indices = cosine_sim.argsort()[::-1][1:6]
+
+    # Obtener los títulos de las películas recomendadas
+    recomendaciones = df.iloc[similar_indices]['title'].tolist()
+
+    return {'lista recomendada': recomendaciones}
