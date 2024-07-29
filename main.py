@@ -139,12 +139,15 @@ def recomendacion(titulo: str):
     idx = df[df['title'] == titulo].index
     if len(idx) == 0:
         raise HTTPException(status_code=404, detail="Película no encontrada")
-    
+
     idx = idx[0]  # Obtener el primer índice si hay más de uno
+
+    # Añadir impresión para depuración
+    print(f"Índice obtenido: {idx}, Tipo: {type(idx)}")
     
     # Verifica que el índice sea un número entero
     if not isinstance(idx, int):
-        raise HTTPException(status_code=500, detail="Índice no es un número entero")
+        raise HTTPException(status_code=500, detail=f"Índice no es un número entero. Tipo actual: {type(idx)}")
 
     # Verifica que el índice esté dentro del rango
     if idx < 0 or idx >= tfidf_matrix.shape[0]:
