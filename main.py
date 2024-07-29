@@ -1,14 +1,13 @@
 from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
 import numpy as np
-import ast
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import linear_kernel
 
 app = FastAPI()
 
 # Cargar el dataset limpio y preprocesar
-df = pd.read_csv('dataset_limpio.csv', dtype={'title': str}, low_memory=False)
+df = pd.read_csv('dataset_limpio.csv')
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -19,19 +18,27 @@ df['release_year'] = df['release_date'].dt.year
 # Indexar la columna title para acelerar las búsquedas
 df.set_index('title', inplace=True, drop=False)
 
-
-# Reemplazar NaN en la columna 'title' con una cadena vacía
-df['title'] = df['title'].fillna('')
-
 # Vectorizar los títulos
-tfidf = TfidfVectorizer()
-tfidf_matriz = tfidf.fit_transform(df['title'])
+tfidf = TfidfVectorizer(stop_words='english')
+df['title'] = df['title'].fillna('')
+tfidf_matrix = tfidf.fit_transform(df['title'])
 
+# Calcular la matriz de similitud
+cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 
+# Crear una serie para mapear títulos a índices
+indices = pd.Series(df.index, index=df['title']).drop_duplicates()
 
+def get_recommendations(title, cosine_sim=cosine_sim):
+    if title not in indices:
+        raise HTTPException(status_code=404, detail="Title not found")
 
-
-
+    idx = indices[title]
+    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sim_scores[1:6]
+    movie_indices = [i[0] for i in sim_scores]
+    return df['title'].iloc[movie_indices].tolist()
 
 @app.get("/")
 def read_root():
@@ -45,7 +52,7 @@ def read_root():
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
             "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10",
-            "/recomendacion/{titulo}": "Devuelve una lista de 5 películas similares a la película especificada.",
+            "/recomendacion/{titulo}": "Devuelve una lista de películas similares a la película especificada."
         },
     }
 
@@ -151,26 +158,11 @@ def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10
         return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
-@app.get('/recomendacion/{titulo}', name="Sistema de recomendación")
-async def recomendacion(titulo: str):
-    '''Se ingresa el nombre de una película y se recomiendan las 5 películas más similares en una lista'''
-
-    # Verificar si el título de la película existe en el DataFrame
-    if titulo not in indices:
-        raise HTTPException(status_code=404, detail="Película no encontrada")
-
-    # Obtener el índice de la película de entrada
-    idx = indices[titulo]
-
-    # Calcular la similitud coseno entre la película de entrada y todas las demás películas en la matriz de características
-    similitudes = cosine_similarity(tfidf_matriz[idx], tfidf_matriz).flatten()
-
-    # Obtener los índices de las 5 películas más similares, excluyendo la propia película de entrada
-    similares_indices = similitudes.argsort()[::-1][1:6]
-
-    # Obtener los títulos de las películas recomendadas
-    recomendaciones = df['title'].iloc[similares_indices].tolist()
-
-    return {'lista recomendada': recomendaciones}
+@app.get("/recomendacion/{titulo}")
+def recomendacion(titulo: str):
+    try:
+        recomendaciones = get_recommendations(titulo)
+        return {"recomendaciones": recomendaciones}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
