@@ -34,9 +34,6 @@ try:
 except Exception as e:
     logger.error(f"Error al cargar los artefactos TF-IDF: {e}")
 
-logging.basicConfig(level=logging.INFO)
-
-
 @app.get("/")
 def read_root():
     return {
@@ -135,11 +132,11 @@ def get_director(nombre_director: str):
 def recomendacion(titulo: str):
     try:
         # Verificar si el título está en el DataFrame
-        if titulo not in movies_df['title'].values:
+        if titulo not in df['title'].values:
             logging.info(f"Título '{titulo}' no encontrado en la base de datos.")
             return {"error": "La película no se encuentra en la base de datos"}
 
-        idx = movies_df.index[movies_df['title'] == titulo].tolist()
+        idx = df.index[df['title'] == titulo].tolist()
         if not idx:
             logging.info(f"No se encontró el índice para el título '{titulo}'.")
             return {"error": "No se encontró el índice para el título"}
@@ -155,7 +152,7 @@ def recomendacion(titulo: str):
         logging.info(f"Sim_scores para '{titulo}': {sim_scores}")
 
         movie_indices = [i[0] for i in sim_scores]
-        recomendaciones = movies_df['title'].iloc[movie_indices].tolist()
+        recomendaciones = df['title'].iloc[movie_indices].tolist()
 
         logging.info(f"Recomendaciones para '{titulo}': {recomendaciones}")
         return recomendaciones
