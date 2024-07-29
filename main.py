@@ -51,7 +51,6 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10",
             "/recomendacion/{titulo}": "Devuelve una lista de películas similares a la película especificada."
         },
     }
@@ -134,30 +133,6 @@ def get_director(nombre_director: str):
         }
     else:
         return {"error": "Director no encontrado"}
-
-@app.get("/dataset_info")
-def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(1000, le=1000)):
-    """
-    Devuelve un subconjunto del dataset.
-
-    - skip: número de la página para saltar (por defecto 0)
-    - limit: número de registros por página (por defecto 1000, máximo 1000)
-    """
-    try:
-        # Seleccionar la página de datos
-        start = skip * limit
-        end = start + limit
-
-        # Asegurarse de que no se superen los límites del DataFrame
-        if start >= len(df):
-            raise HTTPException(status_code=404, detail="No hay más datos para mostrar.")
-
-        # Extraer el subconjunto de datos
-        subset = df.iloc[start:end].replace({np.nan: None, np.inf: None, -np.inf: None})
-
-        return {"columns": df.columns.tolist(), "data": subset.to_dict(orient="records")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/recomendacion/{titulo}")
 def recomendacion(titulo: str):
