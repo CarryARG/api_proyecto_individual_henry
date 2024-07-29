@@ -157,4 +157,7 @@ def recomendacion(titulo: str):
     
     return {"peliculas_similares": peliculas_similares}
 
-# Ejemplo para correr la aplicación: `uvicorn main:app --reload`
+# Para ejecutar el servidor directamente (para pruebas locales)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
