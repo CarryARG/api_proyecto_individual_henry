@@ -10,21 +10,6 @@ df = joblib.load('ML/movies_df.joblib')
 tfidf = joblib.load('ML/tfidf_vectorizer.joblib')
 tfidf_matrix = joblib.load('ML/tfidf_matrix.joblib')
 
-@app.get("/")
-def read_root():
-    return {
-        "message": "Bienvenido a la API de Películas. Utiliza los siguientes endpoints para obtener información:",
-        "endpoints": {
-            "/cantidad_filmaciones_mes/{mes}": "Devuelve la cantidad de películas estrenadas en el mes especificado.",
-            "/cantidad_filmaciones_dia/{dia}": "Devuelve la cantidad de películas estrenadas en el día especificado.",
-            "/score_titulo/{titulo}": "Devuelve el título, año de estreno y score de la película especificada.",
-            "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
-            "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
-            "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/recomendacion/{titulo}": "Devuelve una lista de 5 películas similares al título especificado."
-        },
-    }
-
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
 df['release_month'] = df['release_date'].dt.month
@@ -44,7 +29,7 @@ def read_root():
             "/votos_titulo/{titulo}": "Devuelve el título, cantidad de votos y promedio de votaciones de la película especificada.",
             "/get_actor/{nombre_actor}": "Devuelve el éxito del actor especificado, cantidad de películas y promedio de retorno.",
             "/get_director/{nombre_director}": "Devuelve el éxito del director especificado, nombre de cada película, fecha de lanzamiento, retorno individual, costo y ganancia.",
-            "/dataset_info?page={pagina}&page_size=10": "Endpoint de prueba para revisar el dataset desde el 0 hasta el 453, con un tamaño de 10"
+            "/recomendacion/{titulo}": "Devuelve una lista de 5 películas similares al título especificado."
         },
     }
 
@@ -132,7 +117,6 @@ def get_director(nombre_director: str):
     else:
         return {"error": "Director no encontrado"}
 
-
 @app.get("/recomendacion/{titulo}")
 def recomendacion(titulo: str):
     # Obtener el índice de la película
@@ -142,9 +126,6 @@ def recomendacion(titulo: str):
 
     idx = idx[0]  # Obtener el primer índice si hay más de uno
 
-    # Añadir impresión para depuración
-    print(f"Índice obtenido: {idx}, Tipo: {type(idx)}")
-    
     # Verifica que el índice sea un número entero
     if not isinstance(idx, int):
         raise HTTPException(status_code=500, detail=f"Índice no es un número entero. Tipo actual: {type(idx)}")
