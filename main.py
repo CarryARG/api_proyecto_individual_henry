@@ -2,13 +2,20 @@ from fastapi import FastAPI, HTTPException
 import pandas as pd
 import joblib
 from sklearn.metrics.pairwise import linear_kernel
+import logging
 
 app = FastAPI()
 
+# Configurar el registro
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Cargar el DataFrame procesado y los artefactos
-df = pd.read_csv('movies_dataframe.csv')
-tfidf = joblib.load('tfidf_vectorizer.joblib')
-tfidf_matrix = joblib.load('tfidf_matrix.joblib')
+try:
+    df = pd.read_csv('movies_dataframe.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
+    logger.info("DataFrame cargado exitosamente.")
+except Exception as e:
+    logger.error(f"Error al cargar el DataFrame: {e}")
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -18,6 +25,14 @@ df['release_year'] = df['release_date'].dt.year
 
 # Indexar la columna title para acelerar las búsquedas
 df.set_index('title', inplace=True, drop=False)
+
+# Cargar el vectorizador y la matriz TF-IDF
+try:
+    tfidf = joblib.load('tfidf_vectorizer.joblib')
+    tfidf_matrix = joblib.load('tfidf_matrix.joblib')
+    logger.info("Artefactos TF-IDF cargados exitosamente.")
+except Exception as e:
+    logger.error(f"Error al cargar los artefactos TF-IDF: {e}")
 
 @app.get("/")
 def read_root():
@@ -115,14 +130,25 @@ def get_director(nombre_director: str):
 
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
-    if titulo not in df['title'].values:
-        return {"error": "Película no encontrada"}
+    try:
+        if titulo not in df['title'].values:
+            logger.error(f"Película no encontrada: {titulo}")
+            return {"error": "Película no encontrada"}
 
-    idx = df[df['title'] == titulo].index[0]
-    cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-    sim_scores = list(enumerate(cosine_sim))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    sim_scores = sim_scores[1:6]  # Excluir la propia película
-    movie_indices = [i[0] for i in sim_scores]
-    
-    return [df['title'].iloc[i] for i in movie_indices]
+        # Asegurarse de que idx sea un entero
+        idx = df.index.get_loc(titulo)
+        
+        # Generar las similitudes
+        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
+        sim_scores = list(enumerate(cosine_sim))
+        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+        sim_scores = sim_scores[1:6]  # Excluir la propia película
+        movie_indices = [i[0] for i in sim_scores]
+        
+        recommendations = [df['title'].iloc[i] for i in movie_indices]
+        logger.info(f"Recomendaciones para {titulo}: {recommendations}")
+        return recommendations
+
+    except Exception as e:
+        logger.error(f"Error en la recomendación: {e}")
+        return {"error": "Ocurrió un error durante la recomendación"}
