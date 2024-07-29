@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 app = FastAPI()
 
 # Cargar el dataset limpio y preprocesar
-df = pd.read_csv('dataset_limpio.csv')
+df = pd.read_csv('dataset_limpio.csv', dtype={'title': str}, low_memory=False)
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -20,14 +20,12 @@ df['release_year'] = df['release_date'].dt.year
 df.set_index('title', inplace=True, drop=False)
 
 
-# Crear el objeto TfidfVectorizer
-tfidf = TfidfVectorizer(stop_words="english")
+# Reemplazar NaN en la columna 'title' con una cadena vacía
+df['title'] = df['title'].fillna('')
 
-# Aplicar la transformación TF-IDF a los títulos de las películas
+# Vectorizar los títulos
+tfidf = TfidfVectorizer()
 tfidf_matriz = tfidf.fit_transform(df['title'])
-
-# Crear un objeto 'indices' que mapea los títulos a sus índices
-indices = pd.Series(df.index, index=df['title']).drop_duplicates()
 
 
 
