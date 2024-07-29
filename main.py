@@ -136,16 +136,28 @@ def recomendacion(titulo: str):
     try:
         # Verificar si el título está en el DataFrame
         if titulo not in movies_df['title'].values:
+            logging.info(f"Título '{titulo}' no encontrado en la base de datos.")
             return {"error": "La película no se encuentra en la base de datos"}
 
-        idx = movies_df.index[movies_df['title'] == titulo].tolist()[0]
+        idx = movies_df.index[movies_df['title'] == titulo].tolist()
+        if not idx:
+            logging.info(f"No se encontró el índice para el título '{titulo}'.")
+            return {"error": "No se encontró el índice para el título"}
+
+        idx = idx[0]
+        logging.info(f"Índice para '{titulo}': {idx}")
+
         cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
         sim_scores = list(enumerate(cosine_sim))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]
+        sim_scores = sim_scores[1:6]  # Excluir la película misma
+
+        logging.info(f"Sim_scores para '{titulo}': {sim_scores}")
+
         movie_indices = [i[0] for i in sim_scores]
         recomendaciones = movies_df['title'].iloc[movie_indices].tolist()
-        logging.info(f"Recomendaciones para {titulo}: {recomendaciones}")
+
+        logging.info(f"Recomendaciones para '{titulo}': {recomendaciones}")
         return recomendaciones
     except Exception as e:
         logging.error(f"Error en la recomendación: {e}")
