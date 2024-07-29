@@ -34,6 +34,9 @@ try:
 except Exception as e:
     logger.error(f"Error al cargar los artefactos TF-IDF: {e}")
 
+logging.basicConfig(level=logging.INFO)
+
+
 @app.get("/")
 def read_root():
     return {
@@ -128,27 +131,22 @@ def get_director(nombre_director: str):
     else:
         return {"error": "Director no encontrado"}
 
-@app.get('/recomendacion/{titulo}')
+@app.get("/recomendacion/{titulo}")
 def recomendacion(titulo: str):
     try:
-        if titulo not in df['title'].values:
-            logger.error(f"Película no encontrada: {titulo}")
-            return {"error": "Película no encontrada"}
+        # Verificar si el título está en el DataFrame
+        if titulo not in movies_df['title'].values:
+            return {"error": "La película no se encuentra en la base de datos"}
 
-        # Asegurarse de que idx sea un entero
-        idx = df.index.get_loc(titulo)
-        
-        # Generar las similitudes
-        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
+        idx = movies_df.index[movies_df['title'] == titulo].tolist()[0]
+        cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
         sim_scores = list(enumerate(cosine_sim))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  # Excluir la propia película
+        sim_scores = sim_scores[1:6]
         movie_indices = [i[0] for i in sim_scores]
-        
-        recommendations = [df['title'].iloc[i] for i in movie_indices]
-        logger.info(f"Recomendaciones para {titulo}: {recommendations}")
-        return recommendations
-
+        recomendaciones = movies_df['title'].iloc[movie_indices].tolist()
+        logging.info(f"Recomendaciones para {titulo}: {recomendaciones}")
+        return recomendaciones
     except Exception as e:
-        logger.error(f"Error en la recomendación: {e}")
+        logging.error(f"Error en la recomendación: {e}")
         return {"error": "Ocurrió un error durante la recomendación"}
