@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
 import numpy as np
 import ast
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = FastAPI()
 
@@ -16,6 +18,22 @@ df['release_year'] = df['release_date'].dt.year
 
 # Indexar la columna title para acelerar las búsquedas
 df.set_index('title', inplace=True, drop=False)
+
+
+# Crear el objeto TfidfVectorizer
+tfidf = TfidfVectorizer(stop_words="english")
+
+# Aplicar la transformación TF-IDF a los títulos de las películas
+tfidf_matriz = tfidf.fit_transform(df['title'])
+
+# Crear un objeto 'indices' que mapea los títulos a sus índices
+indices = pd.Series(df.index, index=df['title']).drop_duplicates()
+
+
+
+
+
+
 
 @app.get("/")
 def read_root():
@@ -137,17 +155,24 @@ def dataset_info(skip: int = Query(0, alias="page", ge=0), limit: int = Query(10
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@app.get('/recomendacion/{titulo}')
-def recomendacion(titulo: str):
-    idx = df.index[df['title'].str.lower() == titulo.lower()]
-    if idx.empty:
-        return {"error": "Película no encontrada"}
-    
-    idx = idx[0]
-    sim_scores = list(enumerate(cosine_sim[idx]))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    
-    top_5_indices = [i[0] for i in sim_scores[1:6]]
-    recomendations = df['title'].iloc[top_5_indices].tolist()
-    
-    return {"recomendaciones": recomendations}
+@app.get('/recomendacion/{titulo}', name="Sistema de recomendación")
+async def recomendacion(titulo: str):
+    '''Se ingresa el nombre de una película y se recomiendan las 5 películas más similares en una lista'''
+
+    # Verificar si el título de la película existe en el DataFrame
+    if titulo not in indices:
+        raise HTTPException(status_code=404, detail="Película no encontrada")
+
+    # Obtener el índice de la película de entrada
+    idx = indices[titulo]
+
+    # Calcular la similitud coseno entre la película de entrada y todas las demás películas en la matriz de características
+    similitudes = cosine_similarity(tfidf_matriz[idx], tfidf_matriz).flatten()
+
+    # Obtener los índices de las 5 películas más similares, excluyendo la propia película de entrada
+    similares_indices = similitudes.argsort()[::-1][1:6]
+
+    # Obtener los títulos de las películas recomendadas
+    recomendaciones = df['title'].iloc[similares_indices].tolist()
+
+    return {'lista recomendada': recomendaciones}
