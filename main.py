@@ -134,22 +134,27 @@ def get_director(nombre_director: str):
 
 
 @app.get('/recomendacion/{titulo}', name="Sistema de recomendación")
-async def recomendacion(titulo: str):
-    '''Se ingresa el nombre de una película y se recomienda las 5 películas más similares en una lista'''
-    # Verificar si el título está en el DataFrame
-    if titulo not in df['title'].values:
-        raise HTTPException(status_code=404, detail="Película no encontrada")
-
+def recomendacion(titulo: str):
     # Obtener el índice de la película
-    idx = df[df['title'].str.lower() == titulo.lower()].index[0]
-
-    # Calcular la similitud coseno
-    cosine_sim = cosine_similarity(tfidf_matrix[idx], tfidf_matrix).flatten()
-
+    idx = df[df['title'] == titulo].index
+    if len(idx) == 0:
+        raise HTTPException(status_code=404, detail="Película no encontrada")
+    idx = idx[0]
+    
+    # Verifica que el índice esté dentro del rango
+    if idx < 0 or idx >= tfidf_matrix.shape[0]:
+        raise HTTPException(status_code=500, detail="Índice fuera de rango")
+    
+    # Calcular similitudes
+    try:
+        cosine_sim = cosine_similarity(tfidf_matrix[idx], tfidf_matrix).flatten()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
     # Obtener los índices de las películas más similares
-    similar_indices = cosine_sim.argsort()[::-1][1:6]
+    indices_similares = cosine_sim.argsort()[-6:-1]
+    peliculas_similares = df['title'].iloc[indices_similares].tolist()
+    
+    return {"peliculas_similares": peliculas_similares}
 
-    # Obtener los títulos de las películas recomendadas
-    recomendaciones = df.iloc[similar_indices]['title'].tolist()
-
-    return {'lista recomendada': recomendaciones}
+# Ejemplo para correr la aplicación: `uvicorn main:app --reload`
