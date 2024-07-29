@@ -156,6 +156,13 @@ def recomendacion(titulo: str):
 
         logging.info(f"Recomendaciones para '{titulo}': {recomendaciones}")
         return recomendaciones
+    except ValueError as e:
+        logging.error(f"Error de valor en la recomendación: {e}")
+        return {"error": "El título proporcionado no es válido"}
+    except IndexError as e:
+        logging.error(f"Índice fuera de rango: {e}")
+        return {"error": "No se encontraron películas similares"}
     except Exception as e:
-        logging.error(f"Error en la recomendación: {e}")
-        return {"error": "Ocurrió un error durante la recomendación"}
+        logging.error(f"Error inesperado en la recomendación: {e}")
+        return {"error": "Ocurrió un error interno"}
+    
