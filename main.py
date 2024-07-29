@@ -133,14 +133,19 @@ def get_director(nombre_director: str):
         return {"error": "Director no encontrado"}
 
 
-@app.get('/recomendacion/{titulo}', name="Sistema de recomendación")
+@app.get("/recomendacion/{titulo}")
 def recomendacion(titulo: str):
     # Obtener el índice de la película
     idx = df[df['title'] == titulo].index
     if len(idx) == 0:
         raise HTTPException(status_code=404, detail="Película no encontrada")
-    idx = idx[0]
     
+    idx = idx[0]  # Obtener el primer índice si hay más de uno
+    
+    # Verifica que el índice sea un número entero
+    if not isinstance(idx, int):
+        raise HTTPException(status_code=500, detail="Índice no es un número entero")
+
     # Verifica que el índice esté dentro del rango
     if idx < 0 or idx >= tfidf_matrix.shape[0]:
         raise HTTPException(status_code=500, detail="Índice fuera de rango")
