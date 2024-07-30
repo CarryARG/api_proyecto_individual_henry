@@ -135,21 +135,21 @@ def recomendacion(titulo: str):
     try:
         # Verificar si el título está en el DataFrame
         if titulo.lower() not in df['title'].str.lower().values:
-            logging.info(f"Título '{titulo}' no encontrado en la base de datos.")
+            logger.info(f"Título '{titulo}' no encontrado en la base de datos.")
             return {"error": "La película no se encuentra en la base de datos"}
 
         idx = df.index[df['title'].str.lower() == titulo.lower()].tolist()
         if not idx:
-            logging.info(f"No se encontró el índice para el título '{titulo}'.")
+            logger.info(f"No se encontró el índice para el título '{titulo}'.")
             return {"error": "No se encontró el índice para el título"}
 
         idx = idx[0]
 
         # Calcular la similitud
-        cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix)
+        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix)
         sim_scores = list(enumerate(cosine_sim[0]))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  
+        sim_scores = sim_scores[1:6]  # omitir la primera porque es la misma película
 
         movie_indices = [i[0] for i in sim_scores]
         recomendaciones  = df['title'].iloc[movie_indices].tolist()
@@ -157,11 +157,11 @@ def recomendacion(titulo: str):
         return recomendaciones
 
     except ValueError as e:
-        logging.error(f"Error de valor en la recomendación: {e}")
+        logger.error(f"Error de valor en la recomendación: {e}")
         return {"error": "Ocurrió un error al calcular la similitud. Por favor, verifica los datos de entrada."}
     except IndexError as e:
-        logging.error(f"Índice fuera de rango: {e}")
+        logger.error(f"Índice fuera de rango: {e}")
         return {"error": "No se encontraron películas similares. El título proporcionado podría estar mal escrito o no tener suficientes películas similares."}
     except Exception as e:
-        logging.error(f"Error inesperado en la recomendación: {e}")
+        logger.error(f"Error inesperado en la recomendación: {e}")
         return {"error": "Ocurrió un error interno. Por favor, intenta nuevamente más tarde."}
