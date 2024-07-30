@@ -34,8 +34,8 @@ try:
     plt.figure(figsize=(10, 5))
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
-    plt.savefig('wordcloud.png')   
-  
+    plt.savefig('wordcloud.png')
+
   # Guardar la nube de palabras como una imagen
     plt.close()
 except TypeError as e:
