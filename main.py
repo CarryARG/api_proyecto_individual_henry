@@ -142,27 +142,30 @@ def recomendacion(titulo: str):
             return {"error": "No se encontró el índice para el título"}
 
         idx = idx[0]
-        logging.info(f"Índice para '{titulo}': {idx}")
 
-        cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-        sim_scores = list(enumerate(cosine_sim))
+        # Calcular la similitud
+        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix)  # Asegurar una matriz 2D
+        if cosine_sim.shape != (1, tfidf_matrix.shape[0]):
+            raise ValueError("La matriz de similitud tiene una forma inesperada.")
+
+        # Obtener los índices de las películas más similares
+        sim_scores = list(enumerate(cosine_sim[0]))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  # Excluir la película misma
+        sim_scores = sim_scores[1:6]  
 
-        logging.info(f"Sim_scores para '{titulo}': {sim_scores}")
 
         movie_indices = [i[0] for i in sim_scores]
-        recomendaciones = df['title'].iloc[movie_indices].tolist()
+        recomendaciones  
+ = df['title'].iloc[movie_indices].tolist()
 
-        logging.info(f"Recomendaciones para '{titulo}': {recomendaciones}")
         return recomendaciones
+
     except ValueError as e:
         logging.error(f"Error de valor en la recomendación: {e}")
-        return {"error": "El título proporcionado no es válido"}
+        return {"error": "Ocurrió un error al calcular la similitud. Por favor, verifica los datos de entrada."}
     except IndexError as e:
         logging.error(f"Índice fuera de rango: {e}")
-        return {"error": "No se encontraron películas similares"}
+        return {"error": "No se encontraron películas similares. El título proporcionado podría estar mal escrito o no tener suficientes películas similares."}
     except Exception as e:
         logging.error(f"Error inesperado en la recomendación: {e}")
-        return {"error": "Ocurrió un error interno"}
-    
+        return {"error": "Ocurrió un error interno. Por favor, intenta nuevamente más tarde."}
