@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Cargar el DataFrame procesado y los artefactos
 try:
-    df = pd.read_csv('movies_dataframe.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
+    df = pd.read_csv('dataframe_procesado.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
     logger.info("DataFrame cargado exitosamente.")
 except Exception as e:
     logger.error(f"Error al cargar el DataFrame: {e}")
