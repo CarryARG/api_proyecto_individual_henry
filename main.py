@@ -4,7 +4,6 @@ import numpy as np
 import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
-
 from wordcloud import WordCloud
 
 import matplotlib.pyplot as plt
@@ -36,7 +35,6 @@ try:
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.savefig('wordcloud.png')
-
   # Guardar la nube de palabras como una imagen
     plt.close()
 except TypeError as e:
@@ -165,7 +163,10 @@ def recomendacion(titulo: str):
     # Obtener los índices de las películas más similares
     similar_indices = cosine_sim.argsort()[::-1]
 
+    # Verificar que los índices sean válidos y dentro del rango del DataFrame
+    valid_indices = [i for i in similar_indices[1:6] if 0 <= i < len(df)]
+
     # Obtener los títulos de las películas más similares
-    top_recommendations = [df['title'].iloc[i] for i in similar_indices[1:6]]  # Excluir la película original
+    top_recommendations = [df['title'].iloc[i] for i in valid_indices]
 
     return {"recommendations": top_recommendations}
