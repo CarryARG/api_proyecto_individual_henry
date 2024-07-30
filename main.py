@@ -153,6 +153,9 @@ def recomendacion(titulo: str):
     except IndexError:
         logger.error(f"Película no encontrada: {titulo}")
         return {"error": "Película no encontrada"}
-    except Exception as e:
-        logger.error(f"Error en la recomendación: {e}")
+    except ValueError as e:
+        if "The truth value of an array with more than one element is ambiguous" in str(e):
+            logger.error("Error en la comparación de arreglos. Revisa la lógica de comparación.")
+        else:
+            logger.error(f"Error inesperado: {e}")
         return {"error": "Ocurrió un error durante la recomendación"}
