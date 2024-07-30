@@ -144,19 +144,19 @@ def recomendacion(titulo: str):
         idx = idx[0]
 
         # Calcular la similitud
-        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix)  # Asegurar una matriz 2D
-        if cosine_sim.shape != (1, tfidf_matrix.shape[0]):
-            raise ValueError("La matriz de similitud tiene una forma inesperada.")
-
-        # Obtener los índices de las películas más similares
+        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix)
         sim_scores = list(enumerate(cosine_sim[0]))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
         sim_scores = sim_scores[1:6]  
 
 
         movie_indices = [i[0] for i in sim_scores]
-        recomendaciones = df['title'].iloc[movie_indices].tolist()  
+        recomendaciones  = df['title'].iloc[movie_indices].tolist()
 
+        # Imprimir información para depuración (opcional)
+        print(f"Índice de la película: {idx}")
+        print(f"Matriz de similitud: {cosine_sim}")
+        print(f"Recomendaciones: {recomendaciones}")
 
         return recomendaciones
 
