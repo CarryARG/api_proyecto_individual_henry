@@ -136,19 +136,23 @@ def recomendacion(titulo: str):
             return {"error": "Película no encontrada"}
 
         # Asegurarse de que idx sea un entero
-        idx = df.index.get_loc(titulo)
-        
+        idx = df.index.get_loc(titulo, method='pad')  # O 'backfill' si es necesario
+
         # Generar las similitudes
         cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
         sim_scores = list(enumerate(cosine_sim))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  # Excluir la propia película
+        sim_scores = sim_scores[1:6]  
+  # Excluir la propia película
         movie_indices = [i[0] for i in sim_scores]
-        
+
         recommendations = [df['title'].iloc[i] for i in movie_indices]
         logger.info(f"Recomendaciones para {titulo}: {recommendations}")
         return recommendations
 
+    except IndexError:
+        logger.error(f"Película no encontrada: {titulo}")
+        return {"error": "Película no encontrada"}
     except Exception as e:
         logger.error(f"Error en la recomendación: {e}")
         return {"error": "Ocurrió un error durante la recomendación"}
