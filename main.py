@@ -4,6 +4,7 @@ import numpy as np
 import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+
 from wordcloud import WordCloud
 
 import matplotlib.pyplot as plt
@@ -152,14 +153,19 @@ def get_director(nombre_director: str):
 
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
-    if titulo not in df['title'].values:
+    # Obtener el índice de la película
+    try:
+        idx = df.index.get_loc(titulo)
+    except KeyError:
         return {"error": "Película no encontrada"}
 
-    idx = df[df['title'] == titulo].index[0]
+    # Calcular la similitud del coseno
     cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-    sim_scores = list(enumerate(cosine_sim))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    sim_scores = sim_scores[1:6]  # Excluir la propia película
-    movie_indices = [i[0] for i in sim_scores]
-    
-    return [df['title'].iloc[i] for i in movie_indices]
+
+    # Obtener los índices de las películas más similares
+    similar_indices = cosine_sim.argsort()[::-1]
+
+    # Obtener los títulos de las películas más similares
+    top_recommendations = [df['title'].iloc[i] for i in similar_indices[1:6]]  # Excluir la película original
+
+    return {"recommendations": top_recommendations}
