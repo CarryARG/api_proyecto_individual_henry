@@ -3,9 +3,12 @@ import pandas as pd
 import numpy as np
 import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
-from wordcloud import WordCloud
+from sklearn.metrics.pairwise import linear_kernel   
+
+from wordcloud import WordCloud   
+
 import matplotlib.pyplot as plt
+import re
 
 app = FastAPI()
 
@@ -21,14 +24,27 @@ df['release_year'] = df['release_date'].dt.year
 # Indexar la columna title para acelerar las búsquedas
 df.set_index('title', inplace=True, drop=False)
 
+# Asegurarse que la columna 'title' sea de tipo string y limpiarla de caracteres no alfanuméricos
+df['title'] = df['title'].astype(str)
+df['title'] = df['title'].apply(lambda x: re.sub(r'[^a-zA-Z\s]', '', x))
+
 # Generar una nube de palabras a partir de los títulos de las películas
-text = ' '.join(df['title'].values)
-wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
-plt.figure(figsize=(10, 5))
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis('off')
-plt.savefig('wordcloud.png')  # Guardar la nube de palabras como una imagen
-plt.close()
+try:
+    text = ' '.join(df['title'].values)
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.savefig('wordcloud.png')   
+  
+  # Guardar la nube de palabras como una imagen
+    plt.close()
+except TypeError as e:
+    print(f"Error al generar la nube de palabras: {e}")
+    # Identificar y manejar los títulos problemáticos
+    for index, row in df.iterrows():
+        if not isinstance(row['title'], str):
+            print(f"Row {index} has a non-string value in the 'title' column: {row['title']}")
 
 # Vectorizar los títulos de las películas
 tfidf = TfidfVectorizer(stop_words='english')
