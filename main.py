@@ -136,7 +136,7 @@ def recomendacion(titulo: str):
             return {"error": "Película no encontrada"}
 
         # Asegurarse de que idx sea un entero
-        idx = df.index.get_loc(titulo, method='pad')  # O 'backfill' si es necesario
+        idx = df.index.get_loc(titulo)
 
         # Generar las similitudes
         cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
