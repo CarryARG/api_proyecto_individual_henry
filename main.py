@@ -141,17 +141,16 @@ def recomendacion(titulo: str):
 
         # Generar las similitudes
         cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
-        sim_scores = list(enumerate(cosine_sim))
-        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  
-        # Excluir la propia película
-        movie_indices = [i[0] for i in sim_scores]
+        print("cosine_sim:", cosine_sim)  # Verificar los valores y tipos de datos
+        print("cosine_sim.dtype:", cosine_sim.dtype)  # Imprimir el tipo de dato
 
-        # Comparación segura usando numpy.any()
+        # Comparación segura usando numpy.any() y asegurando tipos de datos
         threshold = 0.8  # Ajusta el umbral según sea necesario
-        if np.any(cosine_sim > threshold):
-            # Si al menos un elemento de cosine_sim es mayor que el umbral, procede
-            recommendations = [df['title'].iloc[i] for i in movie_indices]
+        if np.any(cosine_sim.astype(float) > threshold):  # Convertir a float para asegurar comparación numérica
+            # Obtener los índices de las películas similares
+            similar_indices = np.where(cosine_sim > threshold)[0]
+            # Obtener los títulos de las películas similares
+            recommendations = df.iloc[similar_indices]['title'].tolist()
             logger.info(f"Recomendaciones para {titulo}: {recommendations}")
             return recommendations
         else:
@@ -164,6 +163,11 @@ def recomendacion(titulo: str):
     except ValueError as e:
         if "The truth value of an array with more than one element is ambiguous" in str(e):
             logger.error("Error en la comparación de arreglos. Revisa la lógica de comparación.")
+            logger.error(f"Detalles del error: {e}")
+            # Imprimir más detalles para depurar
+            print("cosine_sim:", cosine_sim)
+            print("threshold:", threshold)
+            print("types:", type(cosine_sim), type(threshold))
         else:
             logger.error(f"Error inesperado: {e}")
         return {"error": "Ocurrió un error durante la recomendación"}
