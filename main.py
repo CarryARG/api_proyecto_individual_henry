@@ -3,9 +3,8 @@ import pandas as pd
 import numpy as np
 import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel   
-
-from wordcloud import WordCloud   
+from sklearn.metrics.pairwise import linear_kernel
+from wordcloud import WordCloud
 
 import matplotlib.pyplot as plt
 import re
