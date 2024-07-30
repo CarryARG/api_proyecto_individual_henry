@@ -16,6 +16,7 @@ try:
     logger.info("DataFrame cargado exitosamente.")
 except Exception as e:
     logger.error(f"Error al cargar el DataFrame: {e}")
+    raise HTTPException(status_code=500, detail="Error al cargar el DataFrame")
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -33,6 +34,7 @@ try:
     logger.info("Artefactos TF-IDF cargados exitosamente.")
 except Exception as e:
     logger.error(f"Error al cargar los artefactos TF-IDF: {e}")
+    raise HTTPException(status_code=500, detail="Error al cargar los artefactos TF-IDF")
 
 @app.get("/")
 def read_root():
