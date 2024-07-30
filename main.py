@@ -1,22 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 import pandas as pd
-import joblib
-from sklearn.metrics.pairwise import linear_kernel
-import logging
 import numpy as np
+import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 app = FastAPI()
 
-# Configurar el registro
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Cargar el DataFrame procesado y los artefactos
-try:
-    df = pd.read_csv('movies_dataframe.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
-    logger.info("DataFrame cargado exitosamente.")
-except Exception as e:
-    logger.error(f"Error al cargar el DataFrame: {e}")
+# Cargar el dataset limpio y preprocesar
+df = pd.read_csv('dataset_limpio.csv')
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
 df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -27,13 +21,25 @@ df['release_year'] = df['release_date'].dt.year
 # Indexar la columna title para acelerar las búsquedas
 df.set_index('title', inplace=True, drop=False)
 
-# Cargar el vectorizador y la matriz TF-IDF
-try:
-    tfidf = joblib.load('tfidf_vectorizer.joblib')
-    tfidf_matrix = joblib.load('tfidf_matrix.joblib')
-    logger.info("Artefactos TF-IDF cargados exitosamente.")
-except Exception as e:
-    logger.error(f"Error al cargar los artefactos TF-IDF: {e}")
+# Generar una nube de palabras a partir de los títulos de las películas
+text = ' '.join(df['title'].values)
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.savefig('wordcloud.png')  # Guardar la nube de palabras como una imagen
+plt.close()
+
+# Vectorizar los títulos de las películas
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(df['title'])
+
+# Guardar el vectorizador y la matriz TF-IDF
+joblib.dump(tfidf, 'tfidf_vectorizer.joblib')
+joblib.dump(tfidf_matrix, 'tfidf_matrix.joblib')
+
+# Guardar el DataFrame procesado
+df.to_csv('movies_dataframe.csv', index=False)
 
 @app.get("/")
 def read_root():
@@ -131,51 +137,14 @@ def get_director(nombre_director: str):
 
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
-    try:
-        # Check for missing movie and handle IndexError
-        if titulo not in df['title'].values:
-            logger.error(f"Película no encontrada: {titulo}")
-            return {"error": "Película no encontrada"}
+    if titulo not in df['title'].values:
+        return {"error": "Película no encontrada"}
 
-        # Ensure integer index
-        try:
-            idx = df.index.get_loc(titulo)
-        except KeyError:
-            logger.error(f"Película no encontrada: {titulo}")
-            return {"error": "Película no encontrada"}
-
-        # Generate cosine similarities
-        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
-        print("cosine_sim:", cosine_sim)
-        print("cosine_sim.dtype:", cosine_sim.dtype)  # Verify data type
-
-        # Handle single movie case
-        if cosine_sim.size == 1:
-            logger.info(f"No se encontraron suficientes películas para comparar con {titulo}.")
-            return {"message": "No se encontraron suficientes películas similares"}
-
-        # Safe comparison using numpy.any() and type conversion
-        threshold = 0.8  # Adjust as needed
-        if np.any(cosine_sim.astype(float) > threshold):  # Ensure numerical comparison
-            # Get similar movie indices
-            similar_indices = np.where(cosine_sim > threshold)[0]
-
-            # Get titles of similar movies
-            recommendations = df.iloc[similar_indices]['title'].tolist()
-            logger.info(f"Recomendaciones para {titulo}: {recommendations}")
-            return recommendations
-        else:
-            logger.info(f"No se encontraron recomendaciones para {titulo}")
-            return {"message": "No se encontraron películas similares"}
-
-    except ValueError as e:
-        if "The truth value of an array with more than one element is ambiguous" in str(e):
-            logger.error("Error en la comparación de arreglos. Revisa la lógica de comparación.")
-            logger.error(f"Detalles del error: {e}")
-            # Print debugging information
-            print("cosine_sim:", cosine_sim)
-            print("threshold:", threshold)
-            print("types:", type(cosine_sim), type(threshold))
-        else:
-            logger.error(f"Error inesperado: {e}")
-        return {"error": "Ocurrió un error durante la recomendación"}
+    idx = df[df['title'] == titulo].index[0]
+    cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
+    sim_scores = list(enumerate(cosine_sim))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sim_scores[1:6]  # Excluir la propia película
+    movie_indices = [i[0] for i in sim_scores]
+    
+    return [df['title'].iloc[i] for i in movie_indices]
