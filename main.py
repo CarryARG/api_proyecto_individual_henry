@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import linear_kernel
 app = FastAPI()
 
 # Cargar el DataFrame procesado y los artefactos
-df = pd.read_csv('movies_dataframe.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
+df = pd.read_csv('movies_dataframe.csv')
 tfidf = joblib.load('tfidf_vectorizer.joblib')
 tfidf_matrix = joblib.load('tfidf_matrix.joblib')
 
