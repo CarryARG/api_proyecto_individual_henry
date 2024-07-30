@@ -130,27 +130,38 @@ def get_director(nombre_director: str):
     else:
         return {"error": "Director no encontrado"}
 
-@app.get('/recomendacion/{titulo}')
+@app.get("/recomendacion/{titulo}")
 def recomendacion(titulo: str):
     try:
-        if titulo not in df['title'].values:
-            logger.error(f"Película no encontrada: {titulo}")
-            return {"error": "Película no encontrada"}
+        # Verificar si el título está en el DataFrame
+        if titulo.lower() not in df['title'].str.lower().values:
+            logging.info(f"Título '{titulo}' no encontrado en la base de datos.")
+            return {"error": "La película no se encuentra en la base de datos"}
 
-        # Asegurarse de que idx sea un entero
-        idx = df.index.get_loc(titulo)
-        
-        # Generar las similitudes
-        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
-        sim_scores = list(enumerate(cosine_sim))
+        idx = df.index[df['title'].str.lower() == titulo.lower()].tolist()
+        if not idx:
+            logging.info(f"No se encontró el índice para el título '{titulo}'.")
+            return {"error": "No se encontró el índice para el título"}
+
+        idx = idx[0]
+
+        # Calcular la similitud
+        cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix)
+        sim_scores = list(enumerate(cosine_sim[0]))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  # Excluir la propia película
-        movie_indices = [i[0] for i in sim_scores]
-        
-        recommendations = [df['title'].iloc[i] for i in movie_indices]
-        logger.info(f"Recomendaciones para {titulo}: {recommendations}")
-        return recommendations
+        sim_scores = sim_scores[1:6]  
 
+        movie_indices = [i[0] for i in sim_scores]
+        recomendaciones  = df['title'].iloc[movie_indices].tolist()
+
+        return recomendaciones
+
+    except ValueError as e:
+        logging.error(f"Error de valor en la recomendación: {e}")
+        return {"error": "Ocurrió un error al calcular la similitud. Por favor, verifica los datos de entrada."}
+    except IndexError as e:
+        logging.error(f"Índice fuera de rango: {e}")
+        return {"error": "No se encontraron películas similares. El título proporcionado podría estar mal escrito o no tener suficientes películas similares."}
     except Exception as e:
-        logger.error(f"Error en la recomendación: {e}")
-        return {"error": "Ocurrió un error durante la recomendación"}
+        logging.error(f"Error inesperado en la recomendación: {e}")
+        return {"error": "Ocurrió un error interno. Por favor, intenta nuevamente más tarde."}
