@@ -155,8 +155,8 @@ def recomendacion(titulo: str):
 
 
         movie_indices = [i[0] for i in sim_scores]
-        recomendaciones  
- = df['title'].iloc[movie_indices].tolist()
+        recomendaciones = df['title'].iloc[movie_indices].tolist()  
+
 
         return recomendaciones
 
