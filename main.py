@@ -2,49 +2,22 @@ from fastapi import FastAPI, HTTPException
 import pandas as pd
 import joblib
 from sklearn.metrics.pairwise import linear_kernel
-import logging
 
 app = FastAPI()
 
-# Configurar el registro
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Cargar el DataFrame procesado y los artefactos
-try:
-    df = pd.read_csv('movies_dataframe.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
-    logger.info("DataFrame cargado exitosamente.")
-except Exception as e:
-    logger.error(f"Error al cargar el DataFrame: {e}")
-    raise HTTPException(status_code=500, detail="Error al cargar el DataFrame.")
+df = pd.read_csv('movies_dataframe.csv', dtype={'release_date': 'str', 'budget': 'float64', 'revenue': 'float64'})
+tfidf = joblib.load('tfidf_vectorizer.joblib')
+tfidf_matrix = joblib.load('tfidf_matrix.joblib')
 
 # Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
-try:
-    df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
-    df['release_month'] = df['release_date'].dt.month
-    df['release_day'] = df['release_date'].dt.dayofweek
-    df['release_year'] = df['release_date'].dt.year
-    logger.info("Fechas procesadas correctamente.")
-except Exception as e:
-    logger.error(f"Error al procesar las fechas: {e}")
-    raise HTTPException(status_code=500, detail="Error al procesar las fechas.")
+df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+df['release_month'] = df['release_date'].dt.month
+df['release_day'] = df['release_date'].dt.dayofweek
+df['release_year'] = df['release_date'].dt.year
 
 # Indexar la columna title para acelerar las búsquedas
-try:
-    df.set_index('title', inplace=True, drop=False)
-    logger.info("Índice de títulos configurado correctamente.")
-except Exception as e:
-    logger.error(f"Error al indexar los títulos: {e}")
-    raise HTTPException(status_code=500, detail="Error al indexar los títulos.")
-
-# Cargar el vectorizador y la matriz TF-IDF
-try:
-    tfidf = joblib.load('tfidf_vectorizer.joblib')
-    tfidf_matrix = joblib.load('tfidf_matrix.joblib')
-    logger.info("Artefactos TF-IDF cargados exitosamente.")
-except Exception as e:
-    logger.error(f"Error al cargar los artefactos TF-IDF: {e}")
-    raise HTTPException(status_code=500, detail="Error al cargar los artefactos TF-IDF.")
+df.set_index('title', inplace=True, drop=False)
 
 @app.get("/")
 def read_root():
@@ -71,10 +44,8 @@ def cantidad_filmaciones_mes(mes: str):
     mes_numero = meses.get(mes.lower())
     if mes_numero:
         count = df[df['release_month'] == mes_numero].shape[0]
-        logger.info(f"{count} películas fueron estrenadas en el mes de {mes}.")
         return {f"{count} cantidad de películas fueron estrenadas en el mes de {mes}"}
     else:
-        logger.error(f"Mes no válido: {mes}")
         return {"error": "Mes no válido"}
 
 @app.get('/cantidad_filmaciones_dia/{dia}')
@@ -86,10 +57,8 @@ def cantidad_filmaciones_dia(dia: str):
     dia_numero = dias.get(dia.lower())
     if dia_numero is not None:
         count = df[df['release_day'] == dia_numero].shape[0]
-        logger.info(f"{count} películas fueron estrenadas en el día {dia}.")
         return {f"{count} cantidad de películas fueron estrenadas en los días {dia}"}
     else:
-        logger.error(f"Día no válido: {dia}")
         return {"error": "Día no válido"}
 
 @app.get('/score_titulo/{titulo}')
@@ -98,10 +67,8 @@ def score_titulo(titulo: str):
     if not film.empty:
         score = film.iloc[0]['popularity']
         year = film.iloc[0]['release_year']
-        logger.info(f"Score encontrado para {titulo}: {score}, año: {year}")
         return {f"La película {titulo} fue estrenada en el año {year} con un score/popularidad de {score}"}
     else:
-        logger.error(f"Película no encontrada: {titulo}")
         return {"error": "Película no encontrada"}
 
 @app.get('/votos_titulo/{titulo}')
@@ -110,14 +77,12 @@ def votos_titulo(titulo: str):
     if not film.empty:
         votos = film.iloc[0]['vote_count']
         promedio_votos = film.iloc[0]['vote_average']
-        logger.info(f"Votos encontrados para {titulo}: {votos}, promedio: {promedio_votos}")
         return {
             "title": titulo,
             "votos": votos,
             "promedio_votos": promedio_votos
         }
     else:
-        logger.error(f"Película no encontrada: {titulo}")
         return {"error": "Película no encontrada"}
 
 @app.get('/get_actor/{nombre_actor}')
@@ -127,7 +92,6 @@ def get_actor(nombre_actor: str):
         cantidad = films.shape[0]
         retorno_total = films['return'].sum()
         retorno_promedio = films['return'].mean()
-        logger.info(f"Datos del actor {nombre_actor} encontrados: cantidad de películas: {cantidad}, retorno promedio: {retorno_promedio}")
         return {
             "actor": nombre_actor,
             "cantidad_peliculas": cantidad,
@@ -135,7 +99,6 @@ def get_actor(nombre_actor: str):
             "retorno_promedio": retorno_promedio
         }
     else:
-        logger.error(f"Actor no encontrado: {nombre_actor}")
         return {"error": "Actor no encontrado"}
 
 @app.get('/get_director/{nombre_director}')
@@ -143,52 +106,23 @@ def get_director(nombre_director: str):
     films = df[df['directors'].str.contains(nombre_director, case=False, na=False)]
     if not films.empty:
         peliculas_info = films[['title', 'release_date', 'return', 'budget', 'revenue']].to_dict(orient='records')
-        logger.info(f"Datos del director {nombre_director} encontrados.")
         return {
             "director": nombre_director,
             "peliculas": peliculas_info
         }
     else:
-        logger.error(f"Director no encontrado: {nombre_director}")
         return {"error": "Director no encontrado"}
 
-@app.get("/recomendacion/{titulo}")
+@app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
-    try:
-        # Verificar si el título está en el DataFrame
-        if titulo not in df['title'].values:
-            logger.info(f"Título '{titulo}' no encontrado en la base de datos.")
-            return {"error": "La película no se encuentra en la base de datos"}
+    if titulo not in df['title'].values:
+        return {"error": "Película no encontrada"}
 
-        idx = df.index[df['title'] == titulo].tolist()
-        if not idx:
-            logger.info(f"No se encontró el índice para el título '{titulo}'.")
-            return {"error": "No se encontró el índice para el título"}
-
-        idx = idx[0]
-
-        # Calcular la similitud
-        cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix)
-        sim_scores = list(enumerate(cosine_sim[0]))
-        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  
-
-        movie_indices = [i[0] for i in sim_scores]
-        recomendaciones  = df['title'].iloc[movie_indices].tolist()
-
-        # Logging información para depuración
-        logger.info(f"Índice de la película: {idx}")
-        logger.info(f"Matriz de similitud: {cosine_sim}")
-        logger.info(f"Recomendaciones: {recomendaciones}")
-
-        return recomendaciones
-
-    except ValueError as e:
-        logger.error(f"Error de valor en la recomendación: {e}")
-        return {"error": "Ocurrió un error al calcular la similitud. Por favor, verifica los datos de entrada."}
-    except IndexError as e:
-        logger.error(f"Índice fuera de rango: {e}")
-        return {"error": "No se encontraron películas similares. El título proporcionado podría estar mal escrito o no tener suficientes películas similares."}
-    except Exception as e:
-        logger.error(f"Error inesperado en la recomendación: {e}")
-        return {"error": "Ocurrió un error interno. Por favor, intenta nuevamente más tarde."}
+    idx = df[df['title'] == titulo].index[0]
+    cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
+    sim_scores = list(enumerate(cosine_sim))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sim_scores[1:6]  # Excluir la propia película
+    movie_indices = [i[0] for i in sim_scores]
+    
+    return [df['title'].iloc[i] for i in movie_indices]
