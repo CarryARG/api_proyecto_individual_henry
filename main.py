@@ -132,29 +132,35 @@ def get_director(nombre_director: str):
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
     try:
+        # Check for missing movie and handle IndexError
         if titulo not in df['title'].values:
             logger.error(f"Película no encontrada: {titulo}")
             return {"error": "Película no encontrada"}
 
-        # Asegurarse de que idx sea un entero
-        idx = df.index.get_loc(titulo)
+        # Ensure integer index
+        try:
+            idx = df.index.get_loc(titulo)
+        except KeyError:
+            logger.error(f"Película no encontrada: {titulo}")
+            return {"error": "Película no encontrada"}
 
-        # Generar las similitudes
+        # Generate cosine similarities
         cosine_sim = linear_kernel(tfidf_matrix[idx:idx+1], tfidf_matrix).flatten()
-        print("cosine_sim:", cosine_sim)  # Verificar los valores y tipos de datos
-        print("cosine_sim.dtype:", cosine_sim.dtype)  # Imprimir el tipo de dato
+        print("cosine_sim:", cosine_sim)
+        print("cosine_sim.dtype:", cosine_sim.dtype)  # Verify data type
 
-        # Manejar el caso de una única película
-        if cosine_sim.size == 1:  # Comprobar el tamaño del array
+        # Handle single movie case
+        if cosine_sim.size == 1:
             logger.info(f"No se encontraron suficientes películas para comparar con {titulo}.")
             return {"message": "No se encontraron suficientes películas similares"}
 
-        # Comparación segura usando numpy.any() y asegurando tipos de datos
-        threshold = 0.8  # Ajusta el umbral según sea necesario
-        if np.any(cosine_sim.astype(float) > threshold):  # Convertir a float para asegurar comparación numérica
-            # Obtener los índices de las películas similares
+        # Safe comparison using numpy.any() and type conversion
+        threshold = 0.8  # Adjust as needed
+        if np.any(cosine_sim.astype(float) > threshold):  # Ensure numerical comparison
+            # Get similar movie indices
             similar_indices = np.where(cosine_sim > threshold)[0]
-            # Obtener los títulos de las películas similares
+
+            # Get titles of similar movies
             recommendations = df.iloc[similar_indices]['title'].tolist()
             logger.info(f"Recomendaciones para {titulo}: {recommendations}")
             return recommendations
@@ -162,18 +168,14 @@ def recomendacion(titulo: str):
             logger.info(f"No se encontraron recomendaciones para {titulo}")
             return {"message": "No se encontraron películas similares"}
 
-    except IndexError:
-        logger.error(f"Película no encontrada: {titulo}")
-        return {"error": "Película no encontrada"}
     except ValueError as e:
         if "The truth value of an array with more than one element is ambiguous" in str(e):
             logger.error("Error en la comparación de arreglos. Revisa la lógica de comparación.")
             logger.error(f"Detalles del error: {e}")
-            # Imprimir más detalles para depurar
+            # Print debugging information
             print("cosine_sim:", cosine_sim)
             print("threshold:", threshold)
             print("types:", type(cosine_sim), type(threshold))
         else:
             logger.error(f"Error inesperado: {e}")
         return {"error": "Ocurrió un error durante la recomendación"}
-
