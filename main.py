@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 from sklearn.metrics.pairwise import linear_kernel
 import logging
+import numpy as np
 
 app = FastAPI()
 
@@ -143,12 +144,19 @@ def recomendacion(titulo: str):
         sim_scores = list(enumerate(cosine_sim))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
         sim_scores = sim_scores[1:6]  
-  # Excluir la propia película
+        # Excluir la propia película
         movie_indices = [i[0] for i in sim_scores]
 
-        recommendations = [df['title'].iloc[i] for i in movie_indices]
-        logger.info(f"Recomendaciones para {titulo}: {recommendations}")
-        return recommendations
+        # Comparación segura usando numpy.any()
+        threshold = 0.8  # Ajusta el umbral según sea necesario
+        if np.any(cosine_sim > threshold):
+            # Si al menos un elemento de cosine_sim es mayor que el umbral, procede
+            recommendations = [df['title'].iloc[i] for i in movie_indices]
+            logger.info(f"Recomendaciones para {titulo}: {recommendations}")
+            return recommendations
+        else:
+            logger.info(f"No se encontraron recomendaciones para {titulo}")
+            return {"message": "No se encontraron películas similares"}
 
     except IndexError:
         logger.error(f"Película no encontrada: {titulo}")
