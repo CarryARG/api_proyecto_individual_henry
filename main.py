@@ -144,6 +144,11 @@ def recomendacion(titulo: str):
         print("cosine_sim:", cosine_sim)  # Verificar los valores y tipos de datos
         print("cosine_sim.dtype:", cosine_sim.dtype)  # Imprimir el tipo de dato
 
+        # Manejar el caso de una única película
+        if cosine_sim.size == 1:  # Comprobar el tamaño del array
+            logger.info(f"No se encontraron suficientes películas para comparar con {titulo}.")
+            return {"message": "No se encontraron suficientes películas similares"}
+
         # Comparación segura usando numpy.any() y asegurando tipos de datos
         threshold = 0.8  # Ajusta el umbral según sea necesario
         if np.any(cosine_sim.astype(float) > threshold):  # Convertir a float para asegurar comparación numérica
@@ -171,3 +176,4 @@ def recomendacion(titulo: str):
         else:
             logger.error(f"Error inesperado: {e}")
         return {"error": "Ocurrió un error durante la recomendación"}
+
