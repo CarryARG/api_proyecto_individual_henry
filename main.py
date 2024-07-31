@@ -12,6 +12,17 @@ df2 = pd.read_csv('recursosApi/dataframe_procesado.csv')
 tfidf = joblib.load('recursosApi/tfidf_vectorizer.joblib')
 tfidf_matrix = joblib.load('recursosApi/tfidf_matrix.joblib')
 
+# Convertir release_date a datetime y crear nuevas columnas para mes y día de la semana
+try:
+    df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+    df['release_month'] = df['release_date'].dt.month
+    df['release_day'] = df['release_date'].dt.dayofweek
+    df['release_year'] = df['release_date'].dt.year
+    logger.info("Columnas adicionales creadas exitosamente.")
+except Exception as e:
+    logger.error(f"Error al procesar las fechas: {e}")
+    raise HTTPException(status_code=500, detail="Error al procesar las fechas")
+
 @app.get("/")
 def read_root():
     return {
@@ -36,7 +47,7 @@ def cantidad_filmaciones_mes(mes: str):
     }
     mes_numero = meses.get(mes.lower())
     if mes_numero:
-        count = df[df['month'] == mes_numero].shape[0]
+        count = df[df['release_month'] == mes_numero].shape[0]
         return {f"{count} cantidad de películas fueron estrenadas en el mes de {mes}"}
     else:
         return {"error": "Mes no válido"}
@@ -49,7 +60,7 @@ def cantidad_filmaciones_dia(dia: str):
     }
     dia_numero = dias.get(dia.lower())
     if dia_numero is not None:
-        count = df[df['day'] == dia_numero].shape[0]
+        count = df[df['release_day'] == dia_numero].shape[0]
         return {f"{count} cantidad de películas fueron estrenadas en los días {dia}"}
     else:
         return {"error": "Día no válido"}
