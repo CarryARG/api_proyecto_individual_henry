@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import linear_kernel
 
 app = FastAPI()
 
-# Cargar el dataset y los modelos preprocesados
+# Carga del dataset y los modelos preprocesados
 df = pd.read_csv('recursosApi/dataframe_procesado.csv')
 tfidf = joblib.load('recursosApi/tfidf_vectorizer.joblib')
 tfidf_matrix = joblib.load('recursosApi/tfidf_matrix.joblib')
@@ -107,21 +107,21 @@ def get_director(nombre_director: str):
 
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
-    # Verificar si el título existe en el DataFrame
+    # Verificamos si el título existe en el DataFrame
     if titulo not in df['title'].values:
         raise HTTPException(status_code=404, detail="Película no encontrada")
 
-    # Obtener el índice de la película
+    # Obtenemos el índice de la película tipeada
     idx = df.index[df['title'] == titulo].tolist()[0]
 
-    # Calcular la similitud del coseno
+    # Calculamos la similitud del coseno
     cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
 
-    # Obtener los índices de las películas más similares
-    similar_indices = cosine_sim.argsort()[-(6 + 1):][::-1]  # Tomar suficientes índices para asegurar al menos 5 únicas
-    similar_indices = [i for i in similar_indices if i != idx]  # Excluir la propia película
+    # Obtenemos los índices de las películas más similares
+    similar_indices = cosine_sim.argsort()[-(6 + 1):][::-1]
+    similar_indices = [i for i in similar_indices if i != idx]
 
-    # Obtener los títulos de las películas más similares
+    # Obtenemos los títulos de las películas "más similares"
     top_recommendations = []
     seen_titles = set()
 
@@ -133,9 +133,9 @@ def recomendacion(titulo: str):
         if len(top_recommendations) == 5:
             break
 
-    # Asegurar que siempre haya 5 recomendaciones, llenando con títulos adicionales si es necesario
+    # Se aseguran que siempre haya 5 recomendaciones, llenando con títulos adicionales si es necesario
     if len(top_recommendations) < 5:
-        additional_indices = cosine_sim.argsort()[-(6 + 5):][::-1]  # Tomar más índices para llenar
+        additional_indices = cosine_sim.argsort()[-(6 + 5):][::-1]
         additional_indices = [i for i in additional_indices if i not in similar_indices and i != idx]
         for index in additional_indices:
             title = df['title'].iloc[index]
