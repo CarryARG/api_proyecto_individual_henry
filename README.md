@@ -1,6 +1,6 @@
 # **PROYECTO INDIVIDUAL Nº1**
 
-![1722405688049](image/README/1722405688049.png)
+![1722405688049](images/1722405688049.png)
 
 ## ``Introducción``
 
