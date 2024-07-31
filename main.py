@@ -121,9 +121,18 @@ def recomendacion(titulo: str):
     similar_indices = cosine_sim.argsort()[-6:][::-1]
 
     # Excluir la propia película del resultado
-    similar_indices = similar_indices[similar_indices != idx]
+    similar_indices = [i for i in similar_indices if i != idx]
 
     # Obtener los títulos de las películas más similares
-    top_recommendations = df['title'].iloc[similar_indices].tolist()
+    top_recommendations = []
+    seen_titles = set()
+
+    for index in similar_indices:
+        title = df['title'].iloc[index]
+        if title not in seen_titles:
+            top_recommendations.append(title)
+            seen_titles.add(title)
+        if len(top_recommendations) == 5:
+            break
 
     return {"recommendations": top_recommendations}
