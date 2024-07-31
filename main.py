@@ -7,7 +7,8 @@ from sklearn.metrics.pairwise import linear_kernel
 app = FastAPI()
 
 # Carga del dataset y los modelos preprocesados
-df = pd.read_csv('recursosApi/dataframe_procesado.csv')
+df = pd.read_csv('recursosApi/dataset_limpio.csv')
+df2 = pd.read_csv('recursosApi/dataframe_procesado.csv')
 tfidf = joblib.load('recursosApi/tfidf_vectorizer.joblib')
 tfidf_matrix = joblib.load('recursosApi/tfidf_matrix.joblib')
 
@@ -119,11 +120,11 @@ def get_director(nombre_director: str):
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
     # Verificamos si el título existe en el DataFrame
-    if titulo not in df['title'].values:
+    if titulo not in df2['title'].values:
         raise HTTPException(status_code=404, detail="Película no encontrada")
 
     # Obtenemos el índice de la película tipeada
-    idx = df.index[df['title'] == titulo].tolist()[0]
+    idx = df2.index[df2['title'] == titulo].tolist()[0]
 
     # Calculamos la similitud del coseno
     cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
@@ -137,7 +138,7 @@ def recomendacion(titulo: str):
     seen_titles = set()
 
     for index in similar_indices:
-        title = df['title'].iloc[index]
+        title = df2['title'].iloc[index]
         if title not in seen_titles:
             top_recommendations.append(title)
             seen_titles.add(title)
@@ -149,7 +150,7 @@ def recomendacion(titulo: str):
         additional_indices = cosine_sim.argsort()[-(6 + 5):][::-1]
         additional_indices = [i for i in additional_indices if i not in similar_indices and i != idx]
         for index in additional_indices:
-            title = df['title'].iloc[index]
+            title = df2['title'].iloc[index]
             if title not in seen_titles:
                 top_recommendations.append(title)
                 seen_titles.add(title)
