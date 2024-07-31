@@ -6,6 +6,10 @@ from sklearn.metrics.pairwise import linear_kernel
 
 app = FastAPI()
 
+# Configura el logger
+logging.basicConfig(level=logging.INFO)  # Puedes ajustar el nivel según tus necesidades
+logger = logging.getLogger(__name__)
+
 # Carga del dataset y los modelos preprocesados
 df = pd.read_csv('recursosApi/dataset_limpio.csv')
 df2 = pd.read_csv('recursosApi/dataframe_procesado.csv')
