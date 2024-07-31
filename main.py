@@ -118,10 +118,8 @@ def recomendacion(titulo: str):
     cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
 
     # Obtener los índices de las películas más similares
-    similar_indices = cosine_sim.argsort()[-6:][::-1]
-
-    # Excluir la propia película del resultado
-    similar_indices = [i for i in similar_indices if i != idx]
+    similar_indices = cosine_sim.argsort()[-(6 + 1):][::-1]  # Tomar suficientes índices para asegurar al menos 5 únicas
+    similar_indices = [i for i in similar_indices if i != idx]  # Excluir la propia película
 
     # Obtener los títulos de las películas más similares
     top_recommendations = []
@@ -134,5 +132,17 @@ def recomendacion(titulo: str):
             seen_titles.add(title)
         if len(top_recommendations) == 5:
             break
+
+    # Asegurar que siempre haya 5 recomendaciones, llenando con títulos adicionales si es necesario
+    if len(top_recommendations) < 5:
+        additional_indices = cosine_sim.argsort()[-(6 + 5):][::-1]  # Tomar más índices para llenar
+        additional_indices = [i for i in additional_indices if i not in similar_indices and i != idx]
+        for index in additional_indices:
+            title = df['title'].iloc[index]
+            if title not in seen_titles:
+                top_recommendations.append(title)
+                seen_titles.add(title)
+            if len(top_recommendations) == 5:
+                break
 
     return {"recommendations": top_recommendations}
