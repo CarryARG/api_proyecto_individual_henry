@@ -95,11 +95,20 @@ def get_actor(nombre_actor: str):
 
 @app.get('/get_director/{nombre_director}')
 def get_director(nombre_director: str):
+    # Filtrar películas dirigidas por el director especificado
     films = df[df['directors'].str.contains(nombre_director, case=False, na=False)]
+    
+    # Verificar si se encontraron películas para el director
     if not films.empty:
+        # Calcular el retorno total del director
+        retorno_total = films['return'].sum()
+
+        # Obtener la información detallada de cada película
         peliculas_info = films[['title', 'release_date', 'return', 'budget', 'revenue']].to_dict(orient='records')
+
         return {
             "director": nombre_director,
+            "retorno_total": retorno_total,
             "peliculas": peliculas_info
         }
     else:
