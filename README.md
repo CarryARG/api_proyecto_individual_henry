@@ -18,7 +18,7 @@ Para lograr los objetivos, se llevaron a cabo los siguientes procesos:
 1. ``Ingeniería de Datos``
 
    **Extracción, Transformación y Limpieza de los datos (ETL)**: Se realizaron las tareas necesarias para extraer los datos relevantes, transformarlos y limpiarlos para su posterior uso.
-2. ``Desarrollo de Software``
+2. ``Desarrollo y Deployment de la API``
 
    **Desarrollo de la API, Virtualización y Deployment**: Se desarrolló una API utilizando el código proporcionado en el archivo 👉 [main.py](https://github.com/CarryARG/api_proyecto_individual_henry/blob/main/main.py). Esta API permitirá el acceso y la consulta de los datos disponibles. Tambien se realizó la virtualización y el despliegue de la infraestructura necesaria para que la API esté disponible y sea accesible para futuras consultas. Esta se desplegó en el siguiente enlace:
    👉 [https://api-proyecto-individual-henry-4.onrender.com](https://api-proyecto-individual-henry-4.onrender.com) (agregar /docs para visualizarlo mejor, si no carga a la primera, recargar la pagina nuevamente y va a estar funcionando)
