@@ -36,7 +36,7 @@ def cantidad_filmaciones_mes(mes: str):
     }
     mes_numero = meses.get(mes.lower())
     if mes_numero:
-        count = df[df['release_month'] == mes_numero].shape[0]
+        count = df[df['month'] == mes_numero].shape[0]
         return {f"{count} cantidad de películas fueron estrenadas en el mes de {mes}"}
     else:
         return {"error": "Mes no válido"}
@@ -49,7 +49,7 @@ def cantidad_filmaciones_dia(dia: str):
     }
     dia_numero = dias.get(dia.lower())
     if dia_numero is not None:
-        count = df[df['release_day'] == dia_numero].shape[0]
+        count = df[df['day'] == dia_numero].shape[0]
         return {f"{count} cantidad de películas fueron estrenadas en los días {dia}"}
     else:
         return {"error": "Día no válido"}
