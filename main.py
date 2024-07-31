@@ -7,9 +7,9 @@ from sklearn.metrics.pairwise import linear_kernel
 app = FastAPI()
 
 # Cargar el dataset y los modelos preprocesados
-df = pd.read_csv('dataframe_procesado.csv')
-tfidf = joblib.load('tfidf_vectorizer.joblib')
-tfidf_matrix = joblib.load('tfidf_matrix.joblib')
+df = pd.read_csv('recursosApi/dataframe_procesado.csv')
+tfidf = joblib.load('recursosApi/tfidf_vectorizer.joblib')
+tfidf_matrix = joblib.load('recursosApi/tfidf_matrix.joblib')
 
 @app.get("/")
 def read_root():
