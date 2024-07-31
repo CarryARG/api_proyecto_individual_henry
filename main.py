@@ -95,16 +95,16 @@ def get_actor(nombre_actor: str):
 
 @app.get('/get_director/{nombre_director}')
 def get_director(nombre_director: str):
-    # Filtrar películas dirigidas por el director especificado
+    print(f"Buscando director: {nombre_director}")  # Mensaje de depuración
+
+    # Reemplaza 'directors' con el nombre correcto si es necesario
     films = df[df['directors'].str.contains(nombre_director, case=False, na=False)]
     
-    # Verificar si se encontraron películas para el director
     if not films.empty:
-        # Calcular el retorno total del director
         retorno_total = films['return'].sum()
-
-        # Obtener la información detallada de cada película
         peliculas_info = films[['title', 'release_date', 'return', 'budget', 'revenue']].to_dict(orient='records')
+
+        print(f"Películas encontradas: {peliculas_info}")  # Mensaje de depuración
 
         return {
             "director": nombre_director,
@@ -112,7 +112,9 @@ def get_director(nombre_director: str):
             "peliculas": peliculas_info
         }
     else:
+        print("No se encontraron películas para el director.")  # Mensaje de depuración
         return {"error": "Director no encontrado"}
+
 
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo: str):
